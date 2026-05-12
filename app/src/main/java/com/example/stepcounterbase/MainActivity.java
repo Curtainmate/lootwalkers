@@ -2,6 +2,7 @@ package com.example.stepcounterbase;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -956,7 +957,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         copy.addView(text(statLine, 13, Color.rgb(226, 205, 163), false));
         row.addView(copy, weightedWidth(1.0f));
 
-        row.setOnClickListener(v -> equipItem(item.id));
+        row.setOnClickListener(v -> showItemDetails(item));
         row.setLayoutParams(buttonLayoutParams());
         return row;
     }
@@ -1030,9 +1031,86 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         equippedBadge.setGravity(Gravity.CENTER);
         row.addView(equippedBadge, new LinearLayout.LayoutParams(dp(70), LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        row.setOnClickListener(v -> equipItem(item.id));
+        row.setOnClickListener(v -> showItemDetails(item));
         row.setLayoutParams(buttonLayoutParams());
         return row;
+    }
+
+    private void showItemDetails(Item item) {
+        boolean equipped = isEquipped(item);
+        Item current = equippedForSlot(item.slot);
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(16), dp(14), dp(16), dp(12));
+        panel.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(itemIcon(item.slot));
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(5), dp(5), dp(5), dp(5));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), rarityColor(item.rarity)));
+        header.addView(icon, new LinearLayout.LayoutParams(dp(74), dp(74)));
+
+        LinearLayout titleCopy = new LinearLayout(this);
+        titleCopy.setOrientation(LinearLayout.VERTICAL);
+        titleCopy.setPadding(dp(12), 0, 0, 0);
+        titleCopy.addView(text(item.rarity + " " + slotLabel(item.slot), 13, rarityColor(item.rarity), true));
+        titleCopy.addView(text(item.displayName(), 19, Color.rgb(245, 224, 177), true));
+        titleCopy.addView(text(equipped ? "Currently equipped" : "In inventory", 13,
+                equipped ? Color.rgb(139, 229, 87) : Color.rgb(226, 205, 163), true));
+        header.addView(titleCopy, weightedWidth(1.0f));
+        panel.addView(header);
+
+        addDivider(panel);
+        panel.addView(ui.detailRow("Stats", itemStatLine(item)));
+        panel.addView(ui.detailRow("Equipped in this slot", current.displayName()));
+        if (current.id != item.id) {
+            panel.addView(ui.detailRow("Current equipped stats", itemStatLine(current)));
+        }
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.CENTER);
+        actions.setPadding(0, dp(8), 0, 0);
+
+        Button closeButton = ui.actionButton("Close", false);
+        Button equipButton = ui.actionButton(equipped ? "Equipped" : "Equip", true);
+        equipButton.setEnabled(!equipped);
+
+        LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(0, dp(52), 1.0f);
+        actionParams.setMargins(dp(4), 0, dp(4), 0);
+        actions.addView(closeButton, actionParams);
+        actions.addView(equipButton, new LinearLayout.LayoutParams(0, dp(52), 1.0f));
+        panel.addView(actions);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(panel)
+                .create();
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        equipButton.setOnClickListener(v -> {
+            equipItem(item.id);
+            dialog.dismiss();
+        });
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+            }
+        });
+        dialog.show();
+    }
+
+    private void addDivider(LinearLayout panel) {
+        View divider = new View(this);
+        divider.setBackgroundColor(Color.rgb(80, 58, 35));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        params.setMargins(0, dp(12), 0, dp(10));
+        panel.addView(divider, params);
     }
 
     private int itemIcon(String slot) {
@@ -1203,6 +1281,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private Item equippedCharm() {
         return equippedOrFallback(equippedCharmId, SLOT_CHARM, "Lucky Pebble");
+    }
+
+    private Item equippedForSlot(String slot) {
+        if (SLOT_WEAPON.equals(slot)) {
+            return equippedWeapon();
+        }
+        if (SLOT_ARMOR.equals(slot)) {
+            return equippedArmor();
+        }
+        if (SLOT_BOOTS.equals(slot)) {
+            return equippedBoots();
+        }
+        return equippedCharm();
     }
 
     private Item equippedOrFallback(int id, String slot, String name) {
