@@ -337,11 +337,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         skillsPanel = darkCard();
         skillsPanel.addView(text("SKILLS", 26, Color.rgb(245, 224, 177), true));
-        addLockedRow(skillsPanel, "Woodcutting");
-        addLockedRow(skillsPanel, "Mining");
-        addLockedRow(skillsPanel, "Fishing");
-        addLockedRow(skillsPanel, "Crafting");
-        addLockedRow(skillsPanel, "Cooking");
+        skillsPanel.addView(skillRow(R.drawable.skill_woodcutting, "Woodcutting"));
+        skillsPanel.addView(skillRow(R.drawable.skill_mining, "Mining"));
+        skillsPanel.addView(skillRow(R.drawable.skill_fishing, "Fishing"));
+        skillsPanel.addView(skillRow(R.drawable.skill_crafting, "Crafting"));
+        skillsPanel.addView(skillRow(R.drawable.skill_cooking, "Cooking"));
         contentRoot.addView(skillsPanel);
 
         bagPanel = darkCard();
@@ -1100,6 +1100,35 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         tile.setOnClickListener(v -> showItemDetails(item));
         return tile;
+    }
+
+    private LinearLayout skillRow(int iconRes, String label) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(9), dp(8), dp(9), dp(8));
+        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(4), dp(4), dp(4), dp(4));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), Color.rgb(192, 125, 44)));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(64), dp(64)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(12), 0, 0, 0);
+        copy.addView(text(label, 17, Color.rgb(245, 224, 177), true));
+        copy.addView(text("COMING SOON", 12, Color.rgb(192, 157, 100), true));
+        row.addView(copy, weightedWidth(1.0f));
+
+        TextView lockView = text("LOCKED", 11, Color.rgb(226, 205, 163), true);
+        lockView.setGravity(Gravity.CENTER);
+        row.addView(lockView, new LinearLayout.LayoutParams(dp(70), LinearLayout.LayoutParams.WRAP_CONTENT));
+        row.setLayoutParams(buttonLayoutParams());
+        return row;
     }
 
     private void showItemDetails(Item item) {
