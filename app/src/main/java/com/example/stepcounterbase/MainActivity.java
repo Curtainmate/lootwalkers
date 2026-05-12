@@ -48,7 +48,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private TextView actionMeterView;
     private TextView lootView;
     private TextView eventLogView;
-    private TextView gearView;
+    private LinearLayout equipmentListView;
     private LinearLayout inventoryListView;
     private LinearLayout dungeonPanel;
     private LinearLayout inventoryPanel;
@@ -331,9 +331,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         bagPanel = darkCard();
         bagPanel.addView(text("BAG", 26, Color.rgb(245, 224, 177), true));
-        gearView = text("", 15, Color.rgb(226, 205, 163), false);
-        gearView.setPadding(0, dp(8), 0, dp(8));
-        bagPanel.addView(gearView);
+        bagPanel.addView(sectionTitle("EQUIPMENT"));
+        equipmentListView = new LinearLayout(this);
+        equipmentListView.setOrientation(LinearLayout.VERTICAL);
+        bagPanel.addView(equipmentListView);
+        bagPanel.addView(sectionTitle("INVENTORY"));
         inventoryListView = new LinearLayout(this);
         inventoryListView.setOrientation(LinearLayout.VERTICAL);
         bagPanel.addView(inventoryListView);
@@ -775,7 +777,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         permissionButton.setVisibility(hasPermission || !hasSensor ? View.GONE : View.VISIBLE);
         resetButton.setVisibility(View.VISIBLE);
 
-        gearView.setText(gearText());
+        updateEquipmentView();
         updateInventoryView();
         lootView.setText(combatInfoText());
         eventLogView.setText(eventLog);
@@ -921,12 +923,45 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return Math.max(0, Math.min(1000, enemyAttackCharge * 1000 / enemyAttackInterval()));
     }
 
-    private String gearText() {
-        return "Weapon: " + equippedWeapon().displayName() + " - " + attackDamage() + " damage / "
-                + attackInterval() + " steps\n"
-                + "Armor: " + equippedArmor().displayName() + " - +" + armorHpBonus() + " HP, " + armorReduction() + "% reduction\n"
-                + "Boots: " + equippedBoots().displayName() + " - +" + bootsHpBonus() + " HP, " + dodgeChance() + "% dodge\n"
-                + "Charm: " + equippedCharm().displayName() + " - " + recoveryAmount() + " recovery, " + (charmLevel * 2) + " bonus gold";
+    private void updateEquipmentView() {
+        if (equipmentListView == null) {
+            return;
+        }
+
+        equipmentListView.removeAllViews();
+        equipmentListView.addView(equipmentRow(R.drawable.slot_weapon, "Weapon", equippedWeapon(),
+                attackDamage() + " max hit / " + attackInterval() + " steps"));
+        equipmentListView.addView(equipmentRow(R.drawable.slot_armor, "Armor", equippedArmor(),
+                "+" + armorHpBonus() + " HP / " + armorReduction() + "% reduction"));
+        equipmentListView.addView(equipmentRow(R.drawable.slot_boots, "Boots", equippedBoots(),
+                "+" + bootsHpBonus() + " HP / " + dodgeChance() + "% dodge"));
+        equipmentListView.addView(equipmentRow(R.drawable.slot_charm, "Charm", equippedCharm(),
+                recoveryAmount() + " recovery / " + (charmLevel * 2) + " bonus gold"));
+    }
+
+    private LinearLayout equipmentRow(int iconRes, String slot, Item item, String statLine) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(8), dp(8), dp(8), dp(8));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        row.addView(icon, new LinearLayout.LayoutParams(dp(76), dp(76)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(10), 0, 0, 0);
+        copy.addView(text(slot, 13, Color.rgb(192, 157, 100), true));
+        copy.addView(text(item.displayName(), 17, Color.rgb(245, 224, 177), true));
+        copy.addView(text(statLine, 13, Color.rgb(226, 205, 163), false));
+        row.addView(copy, weightedWidth(1.0f));
+
+        row.setOnClickListener(v -> equipItem(item.id));
+        row.setLayoutParams(buttonLayoutParams());
+        return row;
     }
 
     private void updateInventoryView() {
