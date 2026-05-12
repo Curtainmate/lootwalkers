@@ -222,8 +222,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightPrompt.setGravity(Gravity.CENTER);
         fightPrompt.setPadding(0, dp(6), 0, dp(12));
         fightHubPanel.addView(fightPrompt);
-        fightHubPanel.addView(adventureCard(R.drawable.card_areas_deep_forest, "AREAS", "Farm enemies for specific drops.", v -> showFightScreen(FIGHT_AREAS)));
-        fightHubPanel.addView(adventureCard(R.drawable.card_dungeon_goblin_cave, "DUNGEONS", "Clear encounters, defeat bosses, claim rewards.", v -> showFightScreen(FIGHT_DUNGEONS)));
+        fightHubPanel.addView(adventureCard("AREAS", "AREAS", "Farm individual enemies for specific drops.", v -> showFightScreen(FIGHT_AREAS)));
+        fightHubPanel.addView(adventureCard("DGN", "DUNGEONS", "Clear encounters, defeat bosses, and open chests.", v -> showFightScreen(FIGHT_DUNGEONS)));
         fightPanel.addView(fightHubPanel);
 
         areasPanel = darkCard();
