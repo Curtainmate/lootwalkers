@@ -87,8 +87,8 @@ final class UiFactory {
         LinearLayout card = new LinearLayout(context);
         card.setOrientation(drawableRes == 0 ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
         card.setGravity(drawableRes == 0 ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
-        card.setPadding(dp(10), dp(10), dp(10), dp(10));
-        card.setMinimumHeight(drawableRes == 0 ? dp(116) : dp(188));
+        card.setPadding(dp(8), dp(8), dp(8), dp(8));
+        card.setMinimumHeight(drawableRes == 0 ? dp(116) : 0);
         card.setBackground(cardBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
         if (listener != null) {
             card.setClickable(true);
@@ -105,23 +105,22 @@ final class UiFactory {
             image.setBackgroundColor(Color.rgb(13, 16, 12));
             LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(126)
+                    dp(140)
             );
-            imageParams.setMargins(0, 0, 0, dp(8));
             card.addView(image, imageParams);
         }
 
-        LinearLayout copy = new LinearLayout(context);
-        copy.setOrientation(LinearLayout.VERTICAL);
-        copy.setPadding(drawableRes == 0 ? dp(12) : dp(4), 0, 0, 0);
-        TextView titleView = text(title, 21, Color.rgb(245, 224, 177), true);
-        titleView.setGravity(drawableRes == 0 ? Gravity.LEFT : Gravity.CENTER);
-        TextView bodyView = text(body, 14, Color.rgb(226, 205, 163), false);
-        bodyView.setGravity(drawableRes == 0 ? Gravity.LEFT : Gravity.CENTER);
-        bodyView.setPadding(0, dp(5), 0, 0);
-        copy.addView(titleView);
-        copy.addView(bodyView);
-        card.addView(copy, weightedWidth(1.0f));
+        if (drawableRes == 0) {
+            LinearLayout copy = new LinearLayout(context);
+            copy.setOrientation(LinearLayout.VERTICAL);
+            copy.setPadding(dp(12), 0, 0, 0);
+            TextView titleView = text(title, 21, Color.rgb(245, 224, 177), true);
+            TextView bodyView = text(body, 14, Color.rgb(226, 205, 163), false);
+            bodyView.setPadding(0, dp(5), 0, 0);
+            copy.addView(titleView);
+            copy.addView(bodyView);
+            card.addView(copy, weightedWidth(1.0f));
+        }
         card.setLayoutParams(buttonLayoutParams());
         return card;
     }
