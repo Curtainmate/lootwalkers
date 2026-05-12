@@ -14,6 +14,20 @@ A tiny native Android fitness RPG prototype that uses real phone steps to move t
 
 ## Build
 
+For the local prototype APK, use the checked-in helper script:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-debug-apk.ps1
+```
+
+It creates a signed debug APK at:
+
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+The script pins the install compatibility metadata to `minSdk 26` and `targetSdk 35`.
+
 Open this folder in Android Studio and build the `app` module.
 
 From a terminal with Android Gradle tooling available:
@@ -22,7 +36,7 @@ From a terminal with Android Gradle tooling available:
 gradle assembleDebug
 ```
 
-The debug APK will be created at:
+The Gradle debug APK will be created at:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
