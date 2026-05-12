@@ -211,13 +211,21 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         LinearLayout topHud = darkCard();
         topHud.setOrientation(LinearLayout.HORIZONTAL);
         topHud.setGravity(Gravity.CENTER_VERTICAL);
-        TextView portrait = text("Arin\nLv. 1", 22, Color.rgb(245, 224, 177), true);
-        topHud.addView(portrait, weightedWidth(0.9f));
-        dateView = text("Lootwalkers", 14, Color.rgb(192, 157, 100), false);
-        topHud.addView(dateView, weightedWidth(0.9f));
-        todayStepsView = text("", 24, Color.rgb(245, 224, 177), true);
+        LinearLayout heroHud = new LinearLayout(this);
+        heroHud.setOrientation(LinearLayout.VERTICAL);
+        TextView nameView = text("Arin", 23, Color.rgb(245, 224, 177), true);
+        heroHud.addView(nameView);
+        dateView = text("Lv. 1", 15, Color.rgb(192, 157, 100), true);
+        heroHud.addView(dateView);
+        topHud.addView(heroHud, weightedWidth(1.0f));
+
+        LinearLayout statHud = new LinearLayout(this);
+        statHud.setOrientation(LinearLayout.VERTICAL);
+        statHud.setGravity(Gravity.RIGHT);
+        todayStepsView = text("", 17, Color.rgb(245, 224, 177), true);
         todayStepsView.setGravity(Gravity.RIGHT);
-        topHud.addView(todayStepsView, weightedWidth(1.2f));
+        statHud.addView(todayStepsView);
+        topHud.addView(statHud, weightedWidth(1.25f));
         screen.addView(topHud);
 
         fightPanel = new LinearLayout(this);
@@ -775,8 +783,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         boolean hasSensor = stepCounterSensor != null;
         boolean hasPermission = hasStepPermission();
-        dateView.setText("Gold " + gold);
-        todayStepsView.setText(todaySteps + " STEPS");
+        dateView.setText("Lv. 1");
+        todayStepsView.setText("Steps today: " + todaySteps + "\nGold: " + gold);
 
         dungeonTitleView.setText(activityTitle());
         dungeonStatusView.setText(activityStatus());
