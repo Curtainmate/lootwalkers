@@ -3,7 +3,6 @@ package com.example.stepcounterbase;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -33,40 +32,6 @@ import java.util.Random;
 
 public class MainActivity extends Activity implements SensorEventListener, SceneView.Model {
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
-    private static final String PREFS = "lootwalkers_prefs";
-    private static final String DATE_KEY = "date";
-    private static final String BASELINE_KEY = "baseline";
-    private static final String TODAY_STEPS_KEY = "today_steps";
-    private static final String DEBUG_STEP_OFFSET_KEY = "debug_step_offset";
-    private static final String ACTIVE_KEY = "active_run";
-    private static final String PHASE_KEY = "phase";
-    private static final String ENCOUNTER_KEY = "encounter";
-    private static final String TRAVEL_LEFT_KEY = "travel_left";
-    private static final String ENEMY_HP_KEY = "enemy_hp";
-    private static final String ATTACK_CHARGE_KEY = "attack_charge";
-    private static final String ENEMY_ATTACK_CHARGE_KEY = "enemy_attack_charge";
-    private static final String PLAYER_HP_KEY = "player_hp";
-    private static final String LAST_GAME_STEPS_KEY = "last_game_steps";
-    private static final String CHEST_READY_KEY = "chest_ready";
-    private static final String LAST_REWARD_KEY = "last_reward";
-    private static final String EVENT_LOG_KEY = "event_log";
-    private static final String CHEST_OPENED_AT_KEY = "chest_opened_at";
-    private static final String AUTO_CHEST_CHARGE_KEY = "auto_chest_charge";
-    private static final String ACTIVITY_MODE_KEY = "activity_mode";
-    private static final String MAIN_TAB_KEY = "main_tab";
-    private static final String FIGHT_SCREEN_KEY = "fight_screen";
-    private static final String GOLD_KEY = "gold";
-    private static final String WEAPON_LEVEL_KEY = "weapon_level";
-    private static final String ARMOR_LEVEL_KEY = "armor_level";
-    private static final String BOOTS_LEVEL_KEY = "boots_level";
-    private static final String CHARM_LEVEL_KEY = "charm_level";
-    private static final String INVENTORY_KEY = "inventory";
-    private static final String NEXT_ITEM_ID_KEY = "next_item_id";
-    private static final String EQUIPPED_WEAPON_KEY = "equipped_weapon";
-    private static final String EQUIPPED_ARMOR_KEY = "equipped_armor";
-    private static final String EQUIPPED_BOOTS_KEY = "equipped_boots";
-    private static final String EQUIPPED_CHARM_KEY = "equipped_charm";
-
     private static final String SLOT_WEAPON = "weapon";
     private static final String SLOT_ARMOR = "armor";
     private static final String SLOT_BOOTS = "boots";
@@ -95,7 +60,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private SensorManager sensorManager;
     private Sensor stepCounterSensor;
-    private SharedPreferences prefs;
+    private SaveStore saveStore;
 
     private TextView dateView;
     private TextView todayStepsView;
@@ -186,7 +151,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        saveStore = new SaveStore(this);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         stepCounterSensor = sensorManager == null ? null : sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
         todayKey = currentDateKey();
@@ -661,44 +626,39 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void loadState() {
-        String storedDate = prefs.getString(DATE_KEY, "");
-        if (!todayKey.equals(storedDate)) {
-            baseline = -1;
-            todaySteps = 0;
-            debugStepOffset = 0;
-        } else {
-            baseline = prefs.getInt(BASELINE_KEY, -1);
-            todaySteps = prefs.getInt(TODAY_STEPS_KEY, 0);
-            debugStepOffset = prefs.getInt(DEBUG_STEP_OFFSET_KEY, 0);
-        }
-
-        activeRun = prefs.getBoolean(ACTIVE_KEY, false);
-        chestReady = prefs.getBoolean(CHEST_READY_KEY, false);
-        phase = prefs.getInt(PHASE_KEY, PHASE_TRAVEL);
-        encounterIndex = prefs.getInt(ENCOUNTER_KEY, 0);
-        enemyHp = prefs.getInt(ENEMY_HP_KEY, enemyMaxHp(false));
-        attackCharge = prefs.getInt(ATTACK_CHARGE_KEY, 0);
-        enemyAttackCharge = prefs.getInt(ENEMY_ATTACK_CHARGE_KEY, 0);
-        playerHp = prefs.getInt(PLAYER_HP_KEY, maxPlayerHp());
-        lastGameSteps = prefs.getInt(LAST_GAME_STEPS_KEY, todaySteps);
-        lastReward = prefs.getString(LAST_REWARD_KEY, lastReward);
-        eventLog = prefs.getString(EVENT_LOG_KEY, eventLog);
-        chestOpenedAt = prefs.getLong(CHEST_OPENED_AT_KEY, 0L);
-        autoChestCharge = prefs.getInt(AUTO_CHEST_CHARGE_KEY, 0);
-        activityMode = prefs.getInt(ACTIVITY_MODE_KEY, activeRun || chestReady ? MODE_DUNGEON : MODE_NONE);
-        mainTab = prefs.getInt(MAIN_TAB_KEY, TAB_FIGHT);
-        fightScreen = prefs.getInt(FIGHT_SCREEN_KEY, activeRun || chestReady ? FIGHT_COMBAT : FIGHT_HUB);
-        gold = prefs.getInt(GOLD_KEY, 0);
-        weaponLevel = prefs.getInt(WEAPON_LEVEL_KEY, 1);
-        armorLevel = prefs.getInt(ARMOR_LEVEL_KEY, 1);
-        bootsLevel = prefs.getInt(BOOTS_LEVEL_KEY, 1);
-        charmLevel = prefs.getInt(CHARM_LEVEL_KEY, 1);
-        nextItemId = prefs.getInt(NEXT_ITEM_ID_KEY, 5);
-        equippedWeaponId = prefs.getInt(EQUIPPED_WEAPON_KEY, 1);
-        equippedArmorId = prefs.getInt(EQUIPPED_ARMOR_KEY, 2);
-        equippedBootsId = prefs.getInt(EQUIPPED_BOOTS_KEY, 3);
-        equippedCharmId = prefs.getInt(EQUIPPED_CHARM_KEY, 4);
-        parseInventory(prefs.getString(INVENTORY_KEY, ""));
+        GameState state = saveStore.load(todayKey, lastReward, eventLog);
+        baseline = state.baseline;
+        todaySteps = state.todaySteps;
+        debugStepOffset = state.debugStepOffset;
+        activeRun = state.activeRun;
+        chestReady = state.chestReady;
+        phase = state.phase;
+        encounterIndex = state.encounterIndex;
+        travelLeft = state.travelLeft;
+        enemyHp = state.enemyHp;
+        attackCharge = state.attackCharge;
+        enemyAttackCharge = state.enemyAttackCharge;
+        playerHp = state.playerHp;
+        lastGameSteps = state.lastGameSteps;
+        lastReward = state.lastReward;
+        eventLog = state.eventLog;
+        chestOpenedAt = state.chestOpenedAt;
+        autoChestCharge = state.autoChestCharge;
+        activityMode = state.activityMode;
+        mainTab = state.mainTab;
+        fightScreen = state.fightScreen;
+        gold = state.gold;
+        weaponLevel = state.weaponLevel;
+        armorLevel = state.armorLevel;
+        bootsLevel = state.bootsLevel;
+        charmLevel = state.charmLevel;
+        nextItemId = state.nextItemId;
+        equippedWeaponId = state.equippedWeaponId;
+        equippedArmorId = state.equippedArmorId;
+        equippedBootsId = state.equippedBootsId;
+        equippedCharmId = state.equippedCharmId;
+        inventory.clear();
+        inventory.addAll(state.inventory);
         if (inventory.isEmpty()) {
             createStarterInventory(weaponLevel, armorLevel, bootsLevel, charmLevel);
         }
@@ -716,40 +676,40 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void saveState() {
-        prefs.edit()
-                .putString(DATE_KEY, todayKey)
-                .putInt(BASELINE_KEY, baseline)
-                .putInt(TODAY_STEPS_KEY, todaySteps)
-                .putInt(DEBUG_STEP_OFFSET_KEY, debugStepOffset)
-                .putBoolean(ACTIVE_KEY, activeRun)
-                .putBoolean(CHEST_READY_KEY, chestReady)
-                .putInt(PHASE_KEY, phase)
-                .putInt(ENCOUNTER_KEY, encounterIndex)
-                .putInt(TRAVEL_LEFT_KEY, travelLeft)
-                .putInt(ENEMY_HP_KEY, enemyHp)
-                .putInt(ATTACK_CHARGE_KEY, attackCharge)
-                .putInt(ENEMY_ATTACK_CHARGE_KEY, enemyAttackCharge)
-                .putInt(PLAYER_HP_KEY, playerHp)
-                .putInt(LAST_GAME_STEPS_KEY, lastGameSteps)
-                .putString(LAST_REWARD_KEY, lastReward)
-                .putString(EVENT_LOG_KEY, eventLog)
-                .putLong(CHEST_OPENED_AT_KEY, chestOpenedAt)
-                .putInt(AUTO_CHEST_CHARGE_KEY, autoChestCharge)
-                .putInt(ACTIVITY_MODE_KEY, activityMode)
-                .putInt(MAIN_TAB_KEY, mainTab)
-                .putInt(FIGHT_SCREEN_KEY, fightScreen)
-                .putInt(GOLD_KEY, gold)
-                .putInt(WEAPON_LEVEL_KEY, weaponLevel)
-                .putInt(ARMOR_LEVEL_KEY, armorLevel)
-                .putInt(BOOTS_LEVEL_KEY, bootsLevel)
-                .putInt(CHARM_LEVEL_KEY, charmLevel)
-                .putInt(NEXT_ITEM_ID_KEY, nextItemId)
-                .putInt(EQUIPPED_WEAPON_KEY, equippedWeaponId)
-                .putInt(EQUIPPED_ARMOR_KEY, equippedArmorId)
-                .putInt(EQUIPPED_BOOTS_KEY, equippedBootsId)
-                .putInt(EQUIPPED_CHARM_KEY, equippedCharmId)
-                .putString(INVENTORY_KEY, serializeInventory())
-                .apply();
+        GameState state = new GameState();
+        state.todayKey = todayKey;
+        state.baseline = baseline;
+        state.todaySteps = todaySteps;
+        state.debugStepOffset = debugStepOffset;
+        state.activeRun = activeRun;
+        state.chestReady = chestReady;
+        state.phase = phase;
+        state.encounterIndex = encounterIndex;
+        state.travelLeft = travelLeft;
+        state.enemyHp = enemyHp;
+        state.attackCharge = attackCharge;
+        state.enemyAttackCharge = enemyAttackCharge;
+        state.playerHp = playerHp;
+        state.lastGameSteps = lastGameSteps;
+        state.lastReward = lastReward;
+        state.eventLog = eventLog;
+        state.chestOpenedAt = chestOpenedAt;
+        state.autoChestCharge = autoChestCharge;
+        state.activityMode = activityMode;
+        state.mainTab = mainTab;
+        state.fightScreen = fightScreen;
+        state.gold = gold;
+        state.weaponLevel = weaponLevel;
+        state.armorLevel = armorLevel;
+        state.bootsLevel = bootsLevel;
+        state.charmLevel = charmLevel;
+        state.nextItemId = nextItemId;
+        state.equippedWeaponId = equippedWeaponId;
+        state.equippedArmorId = equippedArmorId;
+        state.equippedBootsId = equippedBootsId;
+        state.equippedCharmId = equippedCharmId;
+        state.inventory.addAll(inventory);
+        saveStore.save(state);
     }
 
     private void ensureCurrentDay() {
@@ -1180,32 +1140,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         equippedBootsId = 3;
         equippedCharmId = 4;
         nextItemId = 5;
-    }
-
-    private void parseInventory(String value) {
-        inventory.clear();
-        if (value == null || value.trim().isEmpty()) {
-            return;
-        }
-
-        String[] items = value.split(";");
-        for (String itemValue : items) {
-            Item item = Item.fromStorage(itemValue);
-            if (item != null) {
-                inventory.add(item);
-            }
-        }
-    }
-
-    private String serializeInventory() {
-        StringBuilder builder = new StringBuilder();
-        for (Item item : inventory) {
-            if (builder.length() > 0) {
-                builder.append(';');
-            }
-            builder.append(item.toStorage());
-        }
-        return builder.toString();
     }
 
     private String stageLabel() {
