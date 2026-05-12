@@ -288,7 +288,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         combatHeaderPanel.addView(dungeonProgressBar, progressLayoutParams());
         progressDetailView = text("", 14, Color.rgb(245, 224, 177), false);
         progressDetailView.setPadding(0, dp(6), 0, 0);
-        combatHeaderPanel.addView(progressDetailView);
         fightPanel.addView(combatHeaderPanel);
 
         scenePanel = darkCard();
@@ -304,7 +303,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         actionMeterView = text("", 22, Color.rgb(139, 229, 87), true);
         actionMeterView.setGravity(Gravity.CENTER);
         actionMeterView.setPadding(0, dp(2), 0, dp(8));
-        actionPanel.addView(actionMeterView);
 
         LinearLayout meterRow = new LinearLayout(this);
         meterRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -319,7 +317,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         enemyMeterIconView = ui.meterIcon(R.drawable.enemy_attack_icon);
         meterRow.addView(meterCard("Enemy Attack", enemyMeterIconView, enemyProgressBar, enemyView), weightedWidth(1.0f));
         actionPanel.addView(meterRow);
-        retreatButton = actionButton("Retreat", false);
+        retreatButton = actionButton("Retreat from fight", false);
+        retreatButton.setTextColor(Color.rgb(245, 224, 177));
+        retreatButton.setBackground(ui.panelBackground(Color.rgb(82, 34, 28), Color.rgb(188, 84, 58)));
         retreatButton.setOnClickListener(v -> stopActivity());
         actionPanel.addView(retreatButton, buttonLayoutParams());
         fightPanel.addView(actionPanel);
