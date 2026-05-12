@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -77,6 +78,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Button retreatButton;
     private TextView systemView;
     private SceneView sceneView;
+    private ImageView attackMeterIconView;
+    private ImageView enemyMeterIconView;
     private ProgressBar dungeonProgressBar;
     private ProgressBar enemyProgressBar;
     private ProgressBar attackProgressBar;
@@ -293,11 +296,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         attackProgressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         attackProgressBar.setMax(1000);
         nextAttackView = text("", 14, Color.rgb(192, 157, 100), false);
-        meterRow.addView(meterCard("Your Attack", "ATK", attackProgressBar, nextAttackView), weightedWidth(1.0f));
+        attackMeterIconView = ui.meterIcon(R.drawable.attack_icon);
+        meterRow.addView(meterCard("Your Attack", attackMeterIconView, attackProgressBar, nextAttackView), weightedWidth(1.0f));
         enemyProgressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         enemyProgressBar.setMax(1000);
         enemyView = text("", 15, Color.rgb(245, 224, 177), true);
-        meterRow.addView(meterCard("Enemy Attack", "FOE", enemyProgressBar, enemyView), weightedWidth(1.0f));
+        enemyMeterIconView = ui.meterIcon(R.drawable.enemy_attack_icon);
+        meterRow.addView(meterCard("Enemy Attack", enemyMeterIconView, enemyProgressBar, enemyView), weightedWidth(1.0f));
         actionPanel.addView(meterRow);
         retreatButton = actionButton("Retreat", false);
         retreatButton.setOnClickListener(v -> stopActivity());
@@ -763,6 +768,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         dungeonProgressBar.setProgress(dungeonProgress());
         enemyProgressBar.setProgress(enemyAttackProgress());
         attackProgressBar.setProgress(attackProgress());
+        updateMeterIcons();
         actionMeterView.setText(actionMeterText());
         sceneView.invalidate();
 
@@ -875,6 +881,24 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "Recovering";
         }
         return "Keep walking";
+    }
+
+    private void updateMeterIcons() {
+        if (attackMeterIconView == null || enemyMeterIconView == null) {
+            return;
+        }
+        if (chestReady) {
+            attackMeterIconView.setImageResource(R.drawable.chest_open);
+            enemyMeterIconView.setImageResource(R.drawable.chest_open);
+            return;
+        }
+        if (phase == PHASE_EXHAUSTED) {
+            attackMeterIconView.setImageResource(R.drawable.recovery_icon);
+            enemyMeterIconView.setImageResource(R.drawable.enemy_attack_icon);
+            return;
+        }
+        attackMeterIconView.setImageResource(R.drawable.attack_icon);
+        enemyMeterIconView.setImageResource(R.drawable.enemy_attack_icon);
     }
 
     private int attackProgress() {
@@ -1310,6 +1334,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private LinearLayout meterCard(String title, String tag, ProgressBar bar, TextView valueView) {
         return ui.meterCard(title, tag, bar, valueView);
+    }
+
+    private LinearLayout meterCard(String title, ImageView icon, ProgressBar bar, TextView valueView) {
+        return ui.meterCard(title, icon, bar, valueView);
     }
 
     private Button menuButton(String label) {

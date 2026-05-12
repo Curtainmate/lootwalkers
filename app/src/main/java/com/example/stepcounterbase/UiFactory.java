@@ -152,6 +152,27 @@ final class UiFactory {
     }
 
     LinearLayout meterCard(String title, String tag, ProgressBar bar, TextView valueView) {
+        return meterCard(title, placeholderIcon(tag, dp(34)), new LinearLayout.LayoutParams(dp(38), dp(38)),
+                bar, valueView);
+    }
+
+    LinearLayout meterCard(String title, ImageView icon, ProgressBar bar, TextView valueView) {
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(38), dp(38));
+        return meterCard(title, icon, iconParams, bar, valueView);
+    }
+
+    ImageView meterIcon(int drawableRes) {
+        ImageView icon = new ImageView(context);
+        icon.setImageResource(drawableRes);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setBackground(cardBackground(Color.rgb(52, 42, 28), Color.rgb(192, 125, 44)));
+        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
+        return icon;
+    }
+
+    private LinearLayout meterCard(String title, View icon, LinearLayout.LayoutParams iconParams,
+                                  ProgressBar bar, TextView valueView) {
         LinearLayout card = new LinearLayout(context);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(8), dp(8), dp(8), dp(8));
@@ -160,7 +181,7 @@ final class UiFactory {
         LinearLayout header = new LinearLayout(context);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.addView(placeholderIcon(tag, dp(34)), new LinearLayout.LayoutParams(dp(38), dp(38)));
+        header.addView(icon, iconParams);
         TextView titleView = text(title, 13, Color.rgb(245, 224, 177), true);
         titleView.setPadding(dp(8), 0, 0, 0);
         header.addView(titleView, weightedWidth(1.0f));
