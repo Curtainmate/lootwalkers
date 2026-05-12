@@ -131,6 +131,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        configureSystemBars();
         saveStore = new SaveStore(this);
         ui = new UiFactory(this);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -1363,6 +1364,14 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         addEvent("Equipped " + item.name + ".");
         saveState();
         updateViews();
+    }
+
+    private void configureSystemBars() {
+        getWindow().setStatusBarColor(Color.BLACK);
+        getWindow().setNavigationBarColor(Color.BLACK);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getWindow().getDecorView().setSystemUiVisibility(0);
+        }
     }
 
     private void unequipItem(Item item) {
