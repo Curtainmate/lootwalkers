@@ -471,7 +471,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 attackCharge -= attackInterval();
                 int damage = playerHitDamage();
                 enemyHp -= damage;
-                addEvent(equippedWeapon().name + " hits for " + damage + ".");
+                addEvent(attackName() + " hits for " + damage + ".");
                 if (enemyHp <= 0) {
                     finishEnemy();
                     continue;
@@ -646,6 +646,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         inventory.addAll(state.inventory);
         if (inventory.isEmpty()) {
             createStarterInventory(weaponLevel, armorLevel, bootsLevel, charmLevel);
+        } else {
+            normalizeLegacyStarterItems();
         }
         updateEquippedStats();
         playerHp = Math.min(playerHp, maxPlayerHp());
@@ -866,12 +868,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "Auto-opening chest: " + Math.min(autoChestCharge, 10) + " / 10 steps.";
         }
         if (!activeRun) {
-            return equippedWeapon().name + " attacks every " + attackInterval() + " steps.";
+            return attackName() + " attacks every " + attackInterval() + " steps.";
         }
         if (phase == PHASE_EXHAUSTED) {
             return "Recovery: " + recoveryAmount() + " HP every " + recoveryStepCost() + " steps.";
         }
-        return equippedWeapon().name + " " + Math.min(attackCharge, attackInterval()) + " / " + attackInterval() + " steps";
+        return attackName() + " " + Math.min(attackCharge, attackInterval()) + " / " + attackInterval() + " steps";
     }
 
     private String actionMeterText() {
@@ -946,19 +948,22 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(8), dp(8), dp(8), dp(8));
-        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+        int borderColor = item == null ? Color.rgb(126, 82, 37) : rarityColor(item.rarity);
+        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), borderColor));
 
         row.addView(equipmentSlotIcon(slotIconRes, item), new LinearLayout.LayoutParams(dp(76), dp(76)));
 
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(dp(10), 0, 0, 0);
-        copy.addView(text(item.rarity + " " + slot, 13, rarityColor(item.rarity), true));
-        copy.addView(text(item.displayName(), 17, Color.rgb(245, 224, 177), true));
+        copy.addView(text(item == null ? "Empty " + slot : item.rarity + " " + slot, 13, borderColor, true));
+        copy.addView(text(item == null ? emptySlotName(slot) : item.displayName(), 17, Color.rgb(245, 224, 177), true));
         copy.addView(text(statLine, 13, Color.rgb(226, 205, 163), false));
         row.addView(copy, weightedWidth(1.0f));
 
-        row.setOnClickListener(v -> showItemDetails(item));
+        if (item != null) {
+            row.setOnClickListener(v -> showItemDetails(item));
+        }
         row.setLayoutParams(buttonLayoutParams());
         return row;
     }
@@ -1110,8 +1115,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         addDivider(panel);
         panel.addView(ui.detailRow("Stats", itemStatLine(item)));
-        panel.addView(ui.detailRow("Equipped in this slot", current.displayName()));
-        if (current.id != item.id) {
+        panel.addView(ui.detailRow("Equipped in this slot", current == null ? "No item equipped" : current.displayName()));
+        if (current != null && current.id != item.id) {
             panel.addView(ui.detailRow("Current equipped stats", itemStatLine(current)));
         }
 
@@ -1121,8 +1126,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         actions.setPadding(0, dp(8), 0, 0);
 
         Button closeButton = ui.actionButton("Close", false);
-        Button equipButton = ui.actionButton(equipped ? "Equipped" : "Equip", true);
-        equipButton.setEnabled(!equipped);
+        Button equipButton = ui.actionButton(equipped ? "Unequip" : "Equip", true);
 
         LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(0, dp(52), 1.0f);
         actionParams.setMargins(dp(4), 0, dp(4), 0);
@@ -1135,7 +1139,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 .create();
         closeButton.setOnClickListener(v -> dialog.dismiss());
         equipButton.setOnClickListener(v -> {
-            equipItem(item.id);
+            if (equipped) {
+                unequipItem(item);
+            } else {
+                equipItem(item.id);
+            }
             dialog.dismiss();
         });
         dialog.setOnShowListener(d -> {
@@ -1277,6 +1285,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return "Charm";
     }
 
+    private String emptySlotName(String slot) {
+        if ("Weapon".equals(slot)) {
+            return "Punch";
+        }
+        return "No " + slot + " equipped";
+    }
+
     private void equipItem(int itemId) {
         Item item = findItem(itemId);
         if (item == null) {
@@ -1301,6 +1316,28 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         updateViews();
     }
 
+    private void unequipItem(Item item) {
+        if (item == null || !isEquipped(item)) {
+            return;
+        }
+
+        if (item.id == equippedWeaponId) {
+            equippedWeaponId = 0;
+        } else if (item.id == equippedArmorId) {
+            equippedArmorId = 0;
+        } else if (item.id == equippedBootsId) {
+            equippedBootsId = 0;
+        } else if (item.id == equippedCharmId) {
+            equippedCharmId = 0;
+        }
+
+        updateEquippedStats();
+        playerHp = Math.min(maxPlayerHp(), playerHp);
+        addEvent("Unequipped " + item.name + ".");
+        saveState();
+        updateViews();
+    }
+
     private boolean isEquipped(Item item) {
         return item.id == equippedWeaponId
                 || item.id == equippedArmorId
@@ -1309,19 +1346,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private Item equippedWeapon() {
-        return equippedOrFallback(equippedWeaponId, SLOT_WEAPON, "Rusty Sword");
+        return findItem(equippedWeaponId);
     }
 
     private Item equippedArmor() {
-        return equippedOrFallback(equippedArmorId, SLOT_ARMOR, "Cloth Tunic");
+        return findItem(equippedArmorId);
     }
 
     private Item equippedBoots() {
-        return equippedOrFallback(equippedBootsId, SLOT_BOOTS, "Worn Boots");
+        return findItem(equippedBootsId);
     }
 
     private Item equippedCharm() {
-        return equippedOrFallback(equippedCharmId, SLOT_CHARM, "Lucky Pebble");
+        return findItem(equippedCharmId);
     }
 
     private Item equippedForSlot(String slot) {
@@ -1337,31 +1374,36 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return equippedCharm();
     }
 
-    private Item equippedOrFallback(int id, String slot, String name) {
-        Item item = findItem(id);
-        if (item != null) {
-            return item;
-        }
-        return new Item(id, slot, name, "Common", 1);
+    private String attackName() {
+        Item weapon = equippedWeapon();
+        return weapon == null ? "Punch" : weapon.name;
     }
 
     private void updateEquippedStats() {
-        weaponLevel = equippedWeapon().level;
-        armorLevel = equippedArmor().level;
-        bootsLevel = equippedBoots().level;
-        charmLevel = equippedCharm().level;
+        Item weapon = equippedWeapon();
+        Item armor = equippedArmor();
+        Item boots = equippedBoots();
+        Item charm = equippedCharm();
+        weaponLevel = weapon == null ? 0 : weapon.level;
+        armorLevel = armor == null ? 0 : armor.level;
+        bootsLevel = boots == null ? 0 : boots.level;
+        charmLevel = charm == null ? 0 : charm.level;
     }
 
     private int lootLevelForSlot(String slot) {
         int current;
         if (SLOT_WEAPON.equals(slot)) {
-            current = equippedWeapon().level;
+            Item item = equippedWeapon();
+            current = item == null ? 0 : item.level;
         } else if (SLOT_ARMOR.equals(slot)) {
-            current = equippedArmor().level;
+            Item item = equippedArmor();
+            current = item == null ? 0 : item.level;
         } else if (SLOT_BOOTS.equals(slot)) {
-            current = equippedBoots().level;
+            Item item = equippedBoots();
+            current = item == null ? 0 : item.level;
         } else {
-            current = equippedCharm().level;
+            Item item = equippedCharm();
+            current = item == null ? 0 : item.level;
         }
         return current + 1 + (random.nextInt(100) < 18 ? 1 : 0);
     }
@@ -1375,12 +1417,29 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return null;
     }
 
+    private void normalizeLegacyStarterItems() {
+        replaceStarterItem(1, SLOT_WEAPON, "Novice Sword");
+        replaceStarterItem(2, SLOT_ARMOR, "Novice Tunic");
+        replaceStarterItem(3, SLOT_BOOTS, "Novice Boots");
+        replaceStarterItem(4, SLOT_CHARM, "Novice Charm");
+    }
+
+    private void replaceStarterItem(int id, String slot, String name) {
+        for (int index = 0; index < inventory.size(); index += 1) {
+            Item item = inventory.get(index);
+            if (item.id == id && slot.equals(item.slot) && !name.equals(item.name)) {
+                inventory.set(index, new Item(item.id, item.slot, name, item.rarity, item.level));
+                return;
+            }
+        }
+    }
+
     private void createStarterInventory(int weapon, int armor, int boots, int charm) {
         inventory.clear();
-        inventory.add(new Item(1, SLOT_WEAPON, "Rusty Sword", "Common", Math.max(1, weapon)));
-        inventory.add(new Item(2, SLOT_ARMOR, "Cloth Tunic", "Common", Math.max(1, armor)));
-        inventory.add(new Item(3, SLOT_BOOTS, "Worn Boots", "Common", Math.max(1, boots)));
-        inventory.add(new Item(4, SLOT_CHARM, "Lucky Pebble", "Common", Math.max(1, charm)));
+        inventory.add(new Item(1, SLOT_WEAPON, "Novice Sword", "Common", Math.max(1, weapon)));
+        inventory.add(new Item(2, SLOT_ARMOR, "Novice Tunic", "Common", Math.max(1, armor)));
+        inventory.add(new Item(3, SLOT_BOOTS, "Novice Boots", "Common", Math.max(1, boots)));
+        inventory.add(new Item(4, SLOT_CHARM, "Novice Charm", "Common", Math.max(1, charm)));
         equippedWeaponId = 1;
         equippedArmorId = 2;
         equippedBootsId = 3;

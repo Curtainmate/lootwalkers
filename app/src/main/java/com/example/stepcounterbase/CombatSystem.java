@@ -1,15 +1,20 @@
 package com.example.stepcounterbase;
 
 final class CombatSystem {
+    static final int BASE_PLAYER_HP = 100;
+    static final int BASE_ATTACK_DAMAGE = 10;
+    static final int BASE_ATTACK_INTERVAL = 70;
+    static final int BASE_RECOVERY_AMOUNT = 4;
+
     private CombatSystem() {
     }
 
     static int attackInterval(int weaponLevel) {
-        return Math.max(35, 70 - weaponLevel * 4);
+        return Math.max(35, BASE_ATTACK_INTERVAL - weaponLevel * 4);
     }
 
     static int attackDamage(int weaponLevel) {
-        return 10 + weaponLevel * 6;
+        return BASE_ATTACK_DAMAGE + weaponLevel * 6;
     }
 
     static int armorReduction(int armorLevel, int bootsLevel) {
@@ -33,7 +38,7 @@ final class CombatSystem {
     }
 
     static int maxPlayerHp(int armorLevel, int bootsLevel) {
-        return 100 + armorHpBonus(armorLevel) + bootsHpBonus(bootsLevel);
+        return BASE_PLAYER_HP + armorHpBonus(armorLevel) + bootsHpBonus(bootsLevel);
     }
 
     static int armorHpBonus(int armorLevel) {
@@ -53,7 +58,7 @@ final class CombatSystem {
     }
 
     static int recoveryAmount(int charmLevel) {
-        return 4 + charmLevel * 2;
+        return BASE_RECOVERY_AMOUNT + charmLevel * 2;
     }
 
     static int resumeHp(int maxPlayerHp) {
