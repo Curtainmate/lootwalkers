@@ -222,8 +222,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightPrompt.setGravity(Gravity.CENTER);
         fightPrompt.setPadding(0, dp(6), 0, dp(12));
         fightHubPanel.addView(fightPrompt);
-        fightHubPanel.addView(adventureCard("AREAS", "AREAS", "Farm individual enemies for specific drops.", v -> showFightScreen(FIGHT_AREAS)));
-        fightHubPanel.addView(adventureCard("DGN", "DUNGEONS", "Clear encounters, defeat bosses, and open chests.", v -> showFightScreen(FIGHT_DUNGEONS)));
+        fightHubPanel.addView(categoryCard(R.drawable.category_areas, "AREAS", "Farm individual enemies for specific drops.", v -> showFightScreen(FIGHT_AREAS)));
+        fightHubPanel.addView(categoryCard(R.drawable.category_dungeons, "DUNGEONS", "Clear encounters, defeat bosses, and open chests.", v -> showFightScreen(FIGHT_DUNGEONS)));
         fightPanel.addView(fightHubPanel);
 
         areasPanel = darkCard();
@@ -1298,6 +1298,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private LinearLayout adventureCard(int drawableRes, String title, String body, View.OnClickListener listener) {
         return ui.adventureCard(drawableRes, title, body, listener);
+    }
+
+    private LinearLayout categoryCard(int drawableRes, String title, String body, View.OnClickListener listener) {
+        return ui.iconAdventureCard(drawableRes, title, body, listener);
     }
 
     private LinearLayout detailRow(String label, String value) {

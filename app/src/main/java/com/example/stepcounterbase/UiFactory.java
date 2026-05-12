@@ -83,10 +83,19 @@ final class UiFactory {
         return adventureCard(drawableRes, "", title, body, listener);
     }
 
+    LinearLayout iconAdventureCard(int drawableRes, String title, String body, View.OnClickListener listener) {
+        return adventureCard(drawableRes, "", title, body, listener, true);
+    }
+
     LinearLayout adventureCard(int drawableRes, String tag, String title, String body, View.OnClickListener listener) {
+        return adventureCard(drawableRes, tag, title, body, listener, false);
+    }
+
+    private LinearLayout adventureCard(int drawableRes, String tag, String title, String body,
+                                      View.OnClickListener listener, boolean showCopyWithImage) {
         LinearLayout card = new LinearLayout(context);
-        card.setOrientation(drawableRes == 0 ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
-        card.setGravity(drawableRes == 0 ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
+        card.setOrientation(drawableRes == 0 || showCopyWithImage ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+        card.setGravity(drawableRes == 0 || showCopyWithImage ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
         card.setPadding(dp(8), dp(8), dp(8), dp(8));
         card.setMinimumHeight(drawableRes == 0 ? dp(116) : 0);
         card.setBackground(cardBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
@@ -101,19 +110,22 @@ final class UiFactory {
             ImageView image = new ImageView(context);
             image.setImageResource(drawableRes);
             image.setAdjustViewBounds(true);
-            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setScaleType(showCopyWithImage ? ImageView.ScaleType.FIT_CENTER : ImageView.ScaleType.CENTER_CROP);
             image.setBackgroundColor(Color.rgb(13, 16, 12));
             LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(140)
+                    showCopyWithImage ? dp(82) : LinearLayout.LayoutParams.MATCH_PARENT,
+                    showCopyWithImage ? dp(82) : dp(140)
             );
+            if (showCopyWithImage) {
+                imageParams.setMargins(0, 0, dp(12), 0);
+            }
             card.addView(image, imageParams);
         }
 
-        if (drawableRes == 0) {
+        if (drawableRes == 0 || showCopyWithImage) {
             LinearLayout copy = new LinearLayout(context);
             copy.setOrientation(LinearLayout.VERTICAL);
-            copy.setPadding(dp(12), 0, 0, 0);
+            copy.setPadding(drawableRes == 0 ? dp(12) : 0, 0, 0, 0);
             TextView titleView = text(title, 21, Color.rgb(245, 224, 177), true);
             TextView bodyView = text(body, 14, Color.rgb(226, 205, 163), false);
             bodyView.setPadding(0, dp(5), 0, 0);
