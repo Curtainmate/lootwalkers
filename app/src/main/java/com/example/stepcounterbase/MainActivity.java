@@ -30,32 +30,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
+import static com.example.stepcounterbase.GameRules.*;
+
 public class MainActivity extends Activity implements SensorEventListener, SceneView.Model {
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
-    private static final String SLOT_WEAPON = "weapon";
-    private static final String SLOT_ARMOR = "armor";
-    private static final String SLOT_BOOTS = "boots";
-    private static final String SLOT_CHARM = "charm";
-
-    private static final int PHASE_TRAVEL = 0;
-    private static final int PHASE_COMBAT = 1;
-    private static final int PHASE_COMPLETE = 2;
-    private static final int PHASE_EXHAUSTED = 3;
-    private static final int ENCOUNTERS = 3;
-    private static final int TAB_FIGHT = 0;
-    private static final int TAB_SKILLS = 1;
-    private static final int TAB_BAG = 2;
-    private static final int TAB_TOWN = 3;
-    private static final int FIGHT_HUB = 0;
-    private static final int FIGHT_AREAS = 1;
-    private static final int FIGHT_AREA_ENEMY = 2;
-    private static final int FIGHT_DUNGEONS = 3;
-    private static final int FIGHT_DUNGEON_DETAIL = 4;
-    private static final int FIGHT_COMBAT = 5;
-    private static final int MODE_NONE = 0;
-    private static final int MODE_AREA = 1;
-    private static final int MODE_DUNGEON = 2;
-
     private final Random random = new Random();
 
     private SensorManager sensorManager;
@@ -1193,47 +1171,47 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int attackInterval() {
-        return Math.max(35, 70 - weaponLevel * 4);
+        return CombatSystem.attackInterval(weaponLevel);
     }
 
     private int attackDamage() {
-        return 10 + weaponLevel * 6;
+        return CombatSystem.attackDamage(weaponLevel);
     }
 
     private int armorReduction() {
-        return Math.min(45, armorLevel * 3 + bootsLevel);
+        return CombatSystem.armorReduction(armorLevel, bootsLevel);
     }
 
     private int enemyMaxHp(boolean boss) {
-        return boss ? 220 : 75;
+        return CombatSystem.enemyMaxHp(boss);
     }
 
     private String enemyName() {
-        return isBossFight() ? "Goblin Chief" : "Cave Goblin";
+        return CombatSystem.enemyName(isBossFight());
     }
 
     private int enemyMaxHit() {
-        return isBossFight() ? 18 : 10;
+        return CombatSystem.enemyMaxHit(isBossFight());
     }
 
     private int enemyAttackInterval() {
-        return isBossFight() ? 90 : 115;
+        return CombatSystem.enemyAttackInterval(isBossFight());
     }
 
     private int maxPlayerHp() {
-        return 100 + armorHpBonus() + bootsHpBonus();
+        return CombatSystem.maxPlayerHp(armorLevel, bootsLevel);
     }
 
     private int armorHpBonus() {
-        return armorLevel * 12;
+        return CombatSystem.armorHpBonus(armorLevel);
     }
 
     private int bootsHpBonus() {
-        return bootsLevel * 6;
+        return CombatSystem.bootsHpBonus(bootsLevel);
     }
 
     private int dodgeChance() {
-        return Math.min(35, bootsLevel * 3 + charmLevel);
+        return CombatSystem.dodgeChance(bootsLevel, charmLevel);
     }
 
     private int damageReductionPercent() {
@@ -1245,15 +1223,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int recoveryStepCost() {
-        return 25;
+        return CombatSystem.recoveryStepCost();
     }
 
     private int recoveryAmount() {
-        return 4 + charmLevel * 2;
+        return CombatSystem.recoveryAmount(charmLevel);
     }
 
     private int resumeHp() {
-        return Math.max(1, maxPlayerHp() * 40 / 100);
+        return CombatSystem.resumeHp(maxPlayerHp());
     }
 
     private boolean isBossFight() {
@@ -1261,13 +1239,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int estimatedClearSteps() {
-        int combat = ENCOUNTERS * rounds(enemyMaxHp(false), Math.max(1, attackDamage() / 2)) * attackInterval();
-        int boss = rounds(enemyMaxHp(true), Math.max(1, attackDamage() / 2)) * attackInterval();
-        return combat + boss;
-    }
-
-    private int rounds(int hp, int damage) {
-        return (hp + damage - 1) / damage;
+        return CombatSystem.estimatedClearSteps(weaponLevel);
     }
 
     private String difficultyLabel() {
@@ -1282,30 +1254,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private String randomAreaDropSlot() {
-        int roll = random.nextInt(4);
-        if (roll == 0) {
-            return SLOT_WEAPON;
-        }
-        if (roll == 1) {
-            return SLOT_ARMOR;
-        }
-        if (roll == 2) {
-            return SLOT_BOOTS;
-        }
-        return SLOT_CHARM;
+        return LootSystem.randomAreaDropSlot(random);
     }
 
     private String areaDropName(String slot) {
-        if (SLOT_WEAPON.equals(slot)) {
-            return "Goblin Sticker";
-        }
-        if (SLOT_ARMOR.equals(slot)) {
-            return "Patched Jerkin";
-        }
-        if (SLOT_BOOTS.equals(slot)) {
-            return "Mud Boots";
-        }
-        return "Green Charm";
+        return LootSystem.areaDropName(slot);
     }
 
     private boolean hasStepPermission() {

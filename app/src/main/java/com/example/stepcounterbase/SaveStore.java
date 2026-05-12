@@ -3,6 +3,11 @@ package com.example.stepcounterbase;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import static com.example.stepcounterbase.GameRules.FIGHT_COMBAT;
+import static com.example.stepcounterbase.GameRules.FIGHT_HUB;
+import static com.example.stepcounterbase.GameRules.MODE_DUNGEON;
+import static com.example.stepcounterbase.GameRules.MODE_NONE;
+
 final class SaveStore {
     private static final String PREFS = "lootwalkers_prefs";
     private static final String DATE_KEY = "date";
@@ -37,11 +42,6 @@ final class SaveStore {
     private static final String EQUIPPED_ARMOR_KEY = "equipped_armor";
     private static final String EQUIPPED_BOOTS_KEY = "equipped_boots";
     private static final String EQUIPPED_CHARM_KEY = "equipped_charm";
-
-    private static final int MODE_NONE = 0;
-    private static final int MODE_DUNGEON = 2;
-    private static final int FIGHT_HUB = 0;
-    private static final int FIGHT_COMBAT = 5;
 
     private final SharedPreferences prefs;
 
