@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -939,17 +940,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 recoveryAmount() + " recovery / " + (charmLevel * 2) + " bonus gold"));
     }
 
-    private LinearLayout equipmentRow(int iconRes, String slot, Item item, String statLine) {
+    private LinearLayout equipmentRow(int slotIconRes, String slot, Item item, String statLine) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(8), dp(8), dp(8), dp(8));
 
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(iconRes);
-        icon.setAdjustViewBounds(true);
-        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        row.addView(icon, new LinearLayout.LayoutParams(dp(76), dp(76)));
+        row.addView(equipmentSlotIcon(slotIconRes, item), new LinearLayout.LayoutParams(dp(76), dp(76)));
 
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
@@ -962,6 +959,35 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         row.setOnClickListener(v -> equipItem(item.id));
         row.setLayoutParams(buttonLayoutParams());
         return row;
+    }
+
+    private FrameLayout equipmentSlotIcon(int slotIconRes, Item item) {
+        FrameLayout frame = new FrameLayout(this);
+
+        ImageView slotFrame = new ImageView(this);
+        slotFrame.setImageResource(slotIconRes);
+        slotFrame.setAdjustViewBounds(true);
+        slotFrame.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        frame.addView(slotFrame, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER
+        ));
+
+        if (item != null) {
+            ImageView equippedIcon = new ImageView(this);
+            equippedIcon.setImageResource(itemIcon(item.slot));
+            equippedIcon.setAdjustViewBounds(true);
+            equippedIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            equippedIcon.setPadding(dp(9), dp(9), dp(9), dp(9));
+            frame.addView(equippedIcon, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    Gravity.CENTER
+            ));
+        }
+
+        return frame;
     }
 
     private void updateInventoryView() {
