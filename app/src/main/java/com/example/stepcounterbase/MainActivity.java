@@ -195,13 +195,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private View buildLayout() {
-        ScrollView scrollView = new ScrollView(this);
-        scrollView.setBackgroundColor(Color.rgb(16, 14, 11));
+        LinearLayout screen = new LinearLayout(this);
+        screen.setOrientation(LinearLayout.VERTICAL);
+        screen.setBackgroundColor(Color.rgb(16, 14, 11));
+        screen.setPadding(dp(8), dp(10), dp(8), dp(6));
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(8), dp(10), dp(8), dp(10));
-        scrollView.addView(root);
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(false);
+
+        LinearLayout contentRoot = new LinearLayout(this);
+        contentRoot.setOrientation(LinearLayout.VERTICAL);
+        contentRoot.setPadding(0, 0, 0, dp(8));
+        scrollView.addView(contentRoot);
 
         LinearLayout topHud = darkCard();
         topHud.setOrientation(LinearLayout.HORIZONTAL);
@@ -213,11 +218,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         todayStepsView = text("", 24, Color.rgb(245, 224, 177), true);
         todayStepsView.setGravity(Gravity.RIGHT);
         topHud.addView(todayStepsView, weightedWidth(1.2f));
-        root.addView(topHud);
+        screen.addView(topHud);
 
         fightPanel = new LinearLayout(this);
         fightPanel.setOrientation(LinearLayout.VERTICAL);
-        root.addView(fightPanel);
+        contentRoot.addView(fightPanel);
 
         fightHubPanel = darkCard();
         TextView fightTitle = text("FIGHT", 26, Color.rgb(245, 224, 177), true);
@@ -329,7 +334,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         addLockedRow(skillsPanel, "Fishing");
         addLockedRow(skillsPanel, "Crafting");
         addLockedRow(skillsPanel, "Cooking");
-        root.addView(skillsPanel);
+        contentRoot.addView(skillsPanel);
 
         bagPanel = darkCard();
         bagPanel.addView(text("BAG", 26, Color.rgb(245, 224, 177), true));
@@ -341,7 +346,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         inventoryListView = new LinearLayout(this);
         inventoryListView.setOrientation(LinearLayout.VERTICAL);
         bagPanel.addView(inventoryListView);
-        root.addView(bagPanel);
+        contentRoot.addView(bagPanel);
 
         townPanel = darkCard();
         townPanel.addView(text("TOWN", 26, Color.rgb(245, 224, 177), true));
@@ -349,18 +354,31 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         addLockedRow(townPanel, "Bank");
         addLockedRow(townPanel, "Trainer");
         addLockedRow(townPanel, "Activity");
-        root.addView(townPanel);
+        contentRoot.addView(townPanel);
 
         permissionButton = actionButton("Allow step tracking", true);
         permissionButton.setOnClickListener(v -> requestStepPermission());
-        root.addView(permissionButton, buttonLayoutParams());
+        contentRoot.addView(permissionButton, buttonLayoutParams());
 
         resetButton = actionButton("Reset prototype", false);
         resetButton.setOnClickListener(v -> resetPrototype());
-        root.addView(resetButton, buttonLayoutParams());
+        contentRoot.addView(resetButton, buttonLayoutParams());
+
+        eventLogView = text("", 14, Color.rgb(226, 205, 163), false);
+        systemView = text("", 14, Color.rgb(192, 157, 100), false);
+        systemView.setGravity(Gravity.CENTER);
+        systemView.setPadding(0, dp(12), 0, 0);
+        contentRoot.addView(systemView, fullWidthWrapContent());
+
+        screen.addView(scrollView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1.0f
+        ));
 
         LinearLayout navRow = new LinearLayout(this);
         navRow.setOrientation(LinearLayout.HORIZONTAL);
+        navRow.setPadding(0, dp(4), 0, 0);
         fightNavButton = mainNavButton("Fight", TAB_FIGHT, R.drawable.fight_icon);
         skillsNavButton = mainNavButton("Skills", TAB_SKILLS, R.drawable.skills_icon);
         bagNavButton = mainNavButton("Bag", TAB_BAG, R.drawable.bag_icon);
@@ -369,15 +387,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         navRow.addView(skillsNavButton, weightedWidth(1.0f));
         navRow.addView(bagNavButton, weightedWidth(1.0f));
         navRow.addView(townNavButton, weightedWidth(1.0f));
-        root.addView(navRow);
+        screen.addView(navRow);
 
-        eventLogView = text("", 14, Color.rgb(226, 205, 163), false);
-        systemView = text("", 14, Color.rgb(192, 157, 100), false);
-        systemView.setGravity(Gravity.CENTER);
-        systemView.setPadding(0, dp(12), 0, 0);
-        root.addView(systemView, fullWidthWrapContent());
-
-        return scrollView;
+        return screen;
     }
 
     private void startListeningIfReady() {
