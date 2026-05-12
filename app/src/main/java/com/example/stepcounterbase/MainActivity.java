@@ -946,13 +946,14 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(8), dp(8), dp(8), dp(8));
+        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
 
         row.addView(equipmentSlotIcon(slotIconRes, item), new LinearLayout.LayoutParams(dp(76), dp(76)));
 
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(dp(10), 0, 0, 0);
-        copy.addView(text(slot, 13, Color.rgb(192, 157, 100), true));
+        copy.addView(text(item.rarity + " " + slot, 13, rarityColor(item.rarity), true));
         copy.addView(text(item.displayName(), 17, Color.rgb(245, 224, 177), true));
         copy.addView(text(statLine, 13, Color.rgb(226, 205, 163), false));
         row.addView(copy, weightedWidth(1.0f));
@@ -997,43 +998,83 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         inventoryListView.removeAllViews();
+        int visibleCount = 0;
+        LinearLayout row = null;
+
         for (Item item : inventory) {
-            inventoryListView.addView(inventoryItemCard(item));
+            if (isEquipped(item)) {
+                continue;
+            }
+
+            if (visibleCount % 3 == 0) {
+                row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.TOP);
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                rowParams.setMargins(0, 0, 0, dp(8));
+                inventoryListView.addView(row, rowParams);
+            }
+
+            LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(0, dp(118), 1.0f);
+            tileParams.setMargins(dp(3), 0, dp(3), 0);
+            row.addView(inventoryItemTile(item), tileParams);
+            visibleCount += 1;
+        }
+
+        if (visibleCount == 0) {
+            TextView emptyView = text("No unequipped items.", 14, Color.rgb(226, 205, 163), false);
+            emptyView.setGravity(Gravity.CENTER);
+            emptyView.setPadding(0, dp(14), 0, dp(10));
+            inventoryListView.addView(emptyView);
+            return;
+        }
+
+        while (visibleCount % 3 != 0 && row != null) {
+            View spacer = new View(this);
+            LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(0, dp(118), 1.0f);
+            spacerParams.setMargins(dp(3), 0, dp(3), 0);
+            row.addView(spacer, spacerParams);
+            visibleCount += 1;
         }
     }
 
-    private LinearLayout inventoryItemCard(Item item) {
-        boolean equipped = isEquipped(item);
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(8), dp(8), dp(8), dp(8));
-        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+    private LinearLayout inventoryItemTile(Item item) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER_HORIZONTAL);
+        tile.setPadding(dp(6), dp(6), dp(6), dp(6));
+        tile.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
 
         ImageView icon = new ImageView(this);
         icon.setImageResource(itemIcon(item.slot));
         icon.setAdjustViewBounds(true);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
+        icon.setPadding(dp(4), dp(4), dp(4), dp(4));
         icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), rarityColor(item.rarity)));
-        row.addView(icon, new LinearLayout.LayoutParams(dp(58), dp(58)));
+        tile.addView(icon, new LinearLayout.LayoutParams(dp(54), dp(54)));
 
-        LinearLayout copy = new LinearLayout(this);
-        copy.setOrientation(LinearLayout.VERTICAL);
-        copy.setPadding(dp(10), 0, 0, 0);
-        copy.addView(text(item.rarity + " " + slotLabel(item.slot), 12, rarityColor(item.rarity), true));
-        copy.addView(text(item.name + " - Level " + item.level, 16, Color.rgb(245, 224, 177), true));
-        copy.addView(text(itemStatLine(item), 12, Color.rgb(226, 205, 163), false));
-        row.addView(copy, weightedWidth(1.0f));
+        TextView rarityView = text(item.rarity, 10, rarityColor(item.rarity), true);
+        rarityView.setGravity(Gravity.CENTER);
+        rarityView.setPadding(0, dp(4), 0, 0);
+        tile.addView(rarityView);
 
-        TextView equippedBadge = text(equipped ? "EQUIPPED" : "EQUIP", 11,
-                equipped ? Color.rgb(139, 229, 87) : Color.rgb(192, 157, 100), true);
-        equippedBadge.setGravity(Gravity.CENTER);
-        row.addView(equippedBadge, new LinearLayout.LayoutParams(dp(70), LinearLayout.LayoutParams.WRAP_CONTENT));
+        TextView nameView = text(item.name, 12, Color.rgb(245, 224, 177), true);
+        nameView.setGravity(Gravity.CENTER);
+        nameView.setMaxLines(2);
+        tile.addView(nameView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
 
-        row.setOnClickListener(v -> showItemDetails(item));
-        row.setLayoutParams(buttonLayoutParams());
-        return row;
+        TextView levelView = text("Lv. " + item.level, 11, Color.rgb(226, 205, 163), false);
+        levelView.setGravity(Gravity.CENTER);
+        tile.addView(levelView);
+
+        tile.setOnClickListener(v -> showItemDetails(item));
+        return tile;
     }
 
     private void showItemDetails(Item item) {
