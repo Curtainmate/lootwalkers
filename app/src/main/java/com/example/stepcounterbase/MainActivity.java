@@ -5,12 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -36,7 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-public class MainActivity extends Activity implements SensorEventListener {
+public class MainActivity extends Activity implements SensorEventListener, SceneView.Model {
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
     private static final String PREFS = "lootwalkers_prefs";
     private static final String DATE_KEY = "date";
@@ -339,7 +334,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
         scenePanel = darkCard();
         scenePanel.setPadding(dp(4), dp(4), dp(4), dp(4));
-        sceneView = new SceneView(this);
+        sceneView = new SceneView(this, this);
         scenePanel.addView(sceneView, sceneLayoutParams());
         fightPanel.addView(scenePanel);
 
@@ -1667,176 +1662,53 @@ public class MainActivity extends Activity implements SensorEventListener {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private static class Item {
-        final int id;
-        final String slot;
-        final String name;
-        final String rarity;
-        final int level;
-
-        Item(int id, String slot, String name, String rarity, int level) {
-            this.id = id;
-            this.slot = slot;
-            this.name = name;
-            this.rarity = rarity;
-            this.level = level;
-        }
-
-        String displayName() {
-            return name + " (Level " + level + ")";
-        }
-
-        String toStorage() {
-            return id + "," + slot + "," + name + "," + rarity + "," + level;
-        }
-
-        static Item fromStorage(String value) {
-            String[] parts = value.split(",", -1);
-            if (parts.length != 5) {
-                return null;
-            }
-            try {
-                return new Item(
-                        Integer.parseInt(parts[0]),
-                        parts[1],
-                        parts[2],
-                        parts[3],
-                        Integer.parseInt(parts[4])
-                );
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
-        }
+    @Override
+    public boolean sceneHeroWalking() {
+        return activeRun && !chestReady;
     }
 
-    private class SceneView extends View {
-        private static final int FRAME_COUNT = 4;
-        private final Bitmap background;
-        private final Bitmap heroIdle;
-        private final Bitmap heroWalk;
-        private final Bitmap goblin;
-        private final Bitmap goblinBoss;
-        private final Bitmap chestOpening;
-        private final Paint paint = new Paint();
-        private final Paint shadePaint = new Paint();
-        private final Rect src = new Rect();
-        private final Rect dst = new Rect();
+    @Override
+    public int scenePlayerHp() {
+        return playerHp;
+    }
 
-        SceneView(Context context) {
-            super(context);
-            background = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_dungeon);
-            heroIdle = BitmapFactory.decodeResource(getResources(), R.drawable.hero_idle);
-            heroWalk = BitmapFactory.decodeResource(getResources(), R.drawable.hero_walk);
-            goblin = BitmapFactory.decodeResource(getResources(), R.drawable.goblin);
-            goblinBoss = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_boss);
-            chestOpening = BitmapFactory.decodeResource(getResources(), R.drawable.chest_opening);
-            shadePaint.setColor(Color.argb(70, 0, 0, 0));
-            paint.setAntiAlias(false);
-            paint.setFilterBitmap(false);
-            paint.setDither(false);
-        }
+    @Override
+    public int scenePlayerMaxHp() {
+        return maxPlayerHp();
+    }
 
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            drawBackground(canvas);
+    @Override
+    public boolean sceneShouldShowEnemy() {
+        return activeRun && (phase == PHASE_COMBAT || phase == PHASE_EXHAUSTED);
+    }
 
-            int frame = (int) ((System.currentTimeMillis() / 220) % FRAME_COUNT);
-            boolean walking = activeRun && !chestReady;
-            Bitmap heroSheet = walking ? heroWalk : heroIdle;
-            int ground = (int) (getHeight() * 0.88f);
-            int heroSize = Math.min(dp(112), (int) (getHeight() * 0.78f));
-            int heroX = dp(24);
-            int heroY = ground - heroSize;
-            drawFrame(canvas, heroSheet, frame, heroX, heroY, heroSize, heroSize);
-            drawHpBar(canvas, heroX, heroY - dp(18), heroSize, playerHp, maxPlayerHp(), "Arin");
+    @Override
+    public boolean sceneIsBossFight() {
+        return isBossFight();
+    }
 
-            if (activeRun && (phase == PHASE_COMBAT || phase == PHASE_EXHAUSTED)) {
-                Bitmap enemySheet = isBossFight() ? goblinBoss : goblin;
-                int enemySize = isBossFight()
-                        ? Math.min(dp(145), (int) (getHeight() * 0.88f))
-                        : Math.min(dp(112), (int) (getHeight() * 0.75f));
-                int enemyX = getWidth() - enemySize - dp(22);
-                int enemyY = ground - enemySize;
-                drawFrame(canvas, enemySheet, frame, enemyX, enemyY, enemySize, enemySize);
-                drawHpBar(canvas, enemyX, enemyY - dp(18), enemySize, Math.max(0, enemyHp), enemyMaxHp(isBossFight()), enemyName());
-            }
+    @Override
+    public int sceneEnemyHp() {
+        return enemyHp;
+    }
 
-            if (chestReady || recentlyOpenedChest()) {
-                int chestSize = Math.min(dp(92), (int) (getHeight() * 0.52f));
-                int chestX = getWidth() - chestSize - dp(42);
-                int chestFrame = chestReady ? 0 : Math.min(3, (int) ((System.currentTimeMillis() - chestOpenedAt) / 180));
-                drawFrame(canvas, chestOpening, chestFrame, chestX, ground - chestSize - dp(12), chestSize, chestSize);
-            }
+    @Override
+    public int sceneEnemyMaxHp() {
+        return enemyMaxHp(isBossFight());
+    }
 
-            canvas.drawRect(0, 0, getWidth(), getHeight(), shadePaint);
-            postInvalidateDelayed(180);
-        }
+    @Override
+    public String sceneEnemyName() {
+        return enemyName();
+    }
 
-        private void drawBackground(Canvas canvas) {
-            if (background == null) {
-                canvas.drawColor(Color.rgb(35, 45, 39));
-                return;
-            }
+    @Override
+    public boolean sceneChestReady() {
+        return chestReady;
+    }
 
-            float viewRatio = getWidth() / (float) getHeight();
-            float bitmapRatio = background.getWidth() / (float) background.getHeight();
-            if (bitmapRatio > viewRatio) {
-                int cropWidth = Math.round(background.getHeight() * viewRatio);
-                int left = (background.getWidth() - cropWidth) / 2;
-                src.set(left, 0, left + cropWidth, background.getHeight());
-            } else {
-                int cropHeight = Math.round(background.getWidth() / viewRatio);
-                int top = (background.getHeight() - cropHeight) / 2;
-                src.set(0, top, background.getWidth(), top + cropHeight);
-            }
-            dst.set(0, 0, getWidth(), getHeight());
-            canvas.drawBitmap(background, src, dst, paint);
-        }
-
-        private void drawFrame(Canvas canvas, Bitmap sheet, int frame, int x, int y, int width, int height) {
-            if (sheet == null) {
-                return;
-            }
-
-            int frameWidth = sheet.getWidth() / FRAME_COUNT;
-            src.set(frame * frameWidth, 0, (frame + 1) * frameWidth, sheet.getHeight());
-            dst.set(x, y, x + width, y + height);
-            canvas.drawBitmap(sheet, src, dst, paint);
-        }
-
-        private void drawHpBar(Canvas canvas, int x, int y, int width, int current, int max, String label) {
-            if (max <= 0) {
-                return;
-            }
-
-            int barWidth = Math.max(dp(72), Math.min(width, dp(126)));
-            int barHeight = dp(9);
-            int barX = x + (width - barWidth) / 2;
-            int barY = Math.max(dp(8), y);
-            int fillWidth = Math.max(0, Math.min(barWidth, current * barWidth / max));
-
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.argb(210, 20, 12, 10));
-            canvas.drawRect(barX - dp(2), barY - dp(2), barX + barWidth + dp(2), barY + barHeight + dp(2), paint);
-            paint.setColor(Color.rgb(85, 17, 20));
-            canvas.drawRect(barX, barY, barX + barWidth, barY + barHeight, paint);
-            paint.setColor(Color.rgb(214, 54, 48));
-            canvas.drawRect(barX, barY, barX + fillWidth, barY + barHeight, paint);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(1));
-            paint.setColor(Color.rgb(245, 224, 177));
-            canvas.drawRect(barX, barY, barX + barWidth, barY + barHeight, paint);
-            paint.setStyle(Paint.Style.FILL);
-            paint.setTextAlign(Paint.Align.CENTER);
-            paint.setTypeface(Typeface.DEFAULT_BOLD);
-            paint.setTextSize(dp(10));
-            paint.setColor(Color.rgb(245, 224, 177));
-            canvas.drawText(label + " " + current + "/" + max, barX + barWidth / 2f, barY - dp(4), paint);
-        }
-
-        private boolean recentlyOpenedChest() {
-            return chestOpenedAt > 0L && System.currentTimeMillis() - chestOpenedAt < 1400L;
-        }
+    @Override
+    public long sceneChestOpenedAt() {
+        return chestOpenedAt;
     }
 }
