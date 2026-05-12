@@ -251,6 +251,10 @@ final class UiFactory {
         ));
     }
 
+    GradientDrawable panelBackground(int fill, int stroke) {
+        return cardBackground(fill, stroke);
+    }
+
     LinearLayout.LayoutParams fullWidthWrapContent() {
         return new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,

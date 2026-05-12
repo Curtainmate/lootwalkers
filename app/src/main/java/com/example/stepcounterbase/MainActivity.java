@@ -971,11 +971,71 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         inventoryListView.removeAllViews();
         for (Item item : inventory) {
-            Button button = actionButton(itemButtonText(item), isEquipped(item));
-            button.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
-            button.setOnClickListener(v -> equipItem(item.id));
-            inventoryListView.addView(button, buttonLayoutParams());
+            inventoryListView.addView(inventoryItemCard(item));
         }
+    }
+
+    private LinearLayout inventoryItemCard(Item item) {
+        boolean equipped = isEquipped(item);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(8), dp(8), dp(8), dp(8));
+        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(itemIcon(item.slot));
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), rarityColor(item.rarity)));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(58), dp(58)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(10), 0, 0, 0);
+        copy.addView(text(item.rarity + " " + slotLabel(item.slot), 12, rarityColor(item.rarity), true));
+        copy.addView(text(item.name + " - Level " + item.level, 16, Color.rgb(245, 224, 177), true));
+        copy.addView(text(itemStatLine(item), 12, Color.rgb(226, 205, 163), false));
+        row.addView(copy, weightedWidth(1.0f));
+
+        TextView equippedBadge = text(equipped ? "EQUIPPED" : "EQUIP", 11,
+                equipped ? Color.rgb(139, 229, 87) : Color.rgb(192, 157, 100), true);
+        equippedBadge.setGravity(Gravity.CENTER);
+        row.addView(equippedBadge, new LinearLayout.LayoutParams(dp(70), LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        row.setOnClickListener(v -> equipItem(item.id));
+        row.setLayoutParams(buttonLayoutParams());
+        return row;
+    }
+
+    private int itemIcon(String slot) {
+        if (SLOT_WEAPON.equals(slot)) {
+            return R.drawable.item_weapon;
+        }
+        if (SLOT_ARMOR.equals(slot)) {
+            return R.drawable.item_armor;
+        }
+        if (SLOT_BOOTS.equals(slot)) {
+            return R.drawable.item_boots;
+        }
+        if (SLOT_CHARM.equals(slot)) {
+            return R.drawable.item_charm;
+        }
+        return R.drawable.item_gold;
+    }
+
+    private int rarityColor(String rarity) {
+        if ("Rare".equals(rarity)) {
+            return Color.rgb(78, 159, 255);
+        }
+        if ("Epic".equals(rarity)) {
+            return Color.rgb(181, 96, 255);
+        }
+        if ("Uncommon".equals(rarity)) {
+            return Color.rgb(139, 229, 87);
+        }
+        return Color.rgb(192, 157, 100);
     }
 
     private void setActiveTab(int tab) {
@@ -1042,13 +1102,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         addEvent("Returned to the Fight hub.");
         saveState();
         updateViews();
-    }
-
-    private String itemButtonText(Item item) {
-        String equipped = isEquipped(item) ? "Equipped - " : "";
-        return equipped + item.rarity + " " + item.name
-                + "\n" + slotLabel(item.slot) + " - Level " + item.level
-                + " - " + itemStatLine(item);
     }
 
     private String itemStatLine(Item item) {
