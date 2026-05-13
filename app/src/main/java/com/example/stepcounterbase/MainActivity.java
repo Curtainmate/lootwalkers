@@ -256,12 +256,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         areasPanel = darkCard();
         areasPanel.addView(sectionTitle("AREAS"));
-        areasPanel.addView(adventureCard(R.drawable.card_areas_deep_forest, "Deep Forest", "A beginner forest path. Farm Cave Goblins for gold and early gear.", v -> showFightScreen(FIGHT_AREA_ENEMY)));
+        areasPanel.addView(adventureCard(R.drawable.title_grassy_fields, "Grassy Fields", "A sunny beginner meadow. Farm Cave Goblins here while we test the new zone art.", v -> showFightScreen(FIGHT_AREA_ENEMY)));
         areasPanel.addView(backButton());
         fightPanel.addView(areasPanel);
 
         areaEnemyPanel = darkCard();
-        areaEnemyPanel.addView(sectionTitle("Deep Forest"));
+        areaEnemyPanel.addView(sectionTitle("Grassy Fields"));
         areaEnemyPanel.addView(adventureCard(R.drawable.portrait_cave_goblin, "Cave Goblin", "HP 75 | Max Hit 10 | Attack 115 steps", null));
         areaEnemyPanel.addView(detailRow("Possible drops", "Gold, sword, armor, boots, charm"));
         Button startArea = actionButton("Farm Cave Goblin", true);
@@ -454,9 +454,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         playerHp = maxPlayerHp();
         lastGameSteps = todaySteps;
         fightScreen = FIGHT_COMBAT;
-        lastReward = "Deep Forest farming started. Cave Goblins will keep appearing until you retreat.";
+        lastReward = "Grassy Fields farming started. Cave Goblins will keep appearing until you retreat.";
         setRewardMessage("Possible drops", "Farm Cave Goblins for gold and early gear.");
-        addEvent("Started farming Cave Goblins in Deep Forest.");
+        addEvent("Started farming Cave Goblins in Grassy Fields.");
         saveState();
         updateViews();
         startListeningIfReady();
@@ -856,7 +856,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private String activityTitle() {
         if (activityMode == MODE_AREA) {
-            return "Deep Forest";
+            return "Grassy Fields";
         }
         if (activityMode == MODE_DUNGEON || chestReady) {
             return "Goblin Cave I";
@@ -2027,5 +2027,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     @Override
     public long sceneChestOpenedAt() {
         return chestOpenedAt;
+    }
+
+    @Override
+    public boolean sceneUseGrassyFields() {
+        return activityMode == MODE_AREA;
     }
 }

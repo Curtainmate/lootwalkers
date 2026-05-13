@@ -31,6 +31,8 @@ final class SceneView extends View {
         boolean sceneChestReady();
 
         long sceneChestOpenedAt();
+
+        boolean sceneUseGrassyFields();
     }
 
     private static final int FRAME_COUNT = 4;
@@ -39,7 +41,8 @@ final class SceneView extends View {
     private static final int BOSS_BASELINE_OFFSET_DP = 0;
 
     private final Model model;
-    private final Bitmap background;
+    private final Bitmap caveBackground;
+    private final Bitmap grassyFieldsBackground;
     private final Bitmap heroIdle;
     private final Bitmap heroWalk;
     private final Bitmap goblin;
@@ -53,7 +56,8 @@ final class SceneView extends View {
     SceneView(Context context, Model model) {
         super(context);
         this.model = model;
-        background = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_dungeon);
+        caveBackground = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_dungeon);
+        grassyFieldsBackground = BitmapFactory.decodeResource(getResources(), R.drawable.background_grassy_fields);
         heroIdle = BitmapFactory.decodeResource(getResources(), R.drawable.hero_idle);
         heroWalk = BitmapFactory.decodeResource(getResources(), R.drawable.hero_walk);
         goblin = BitmapFactory.decodeResource(getResources(), R.drawable.goblin);
@@ -106,6 +110,7 @@ final class SceneView extends View {
     }
 
     private void drawBackground(Canvas canvas) {
+        Bitmap background = model.sceneUseGrassyFields() ? grassyFieldsBackground : caveBackground;
         if (background == null) {
             canvas.drawColor(Color.rgb(35, 45, 39));
             return;
