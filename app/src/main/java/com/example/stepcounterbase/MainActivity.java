@@ -131,6 +131,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Item lastRewardItem = null;
     private int lastRewardGold = 0;
     private boolean lastRewardFromChest = false;
+    private int rewardStepsRemaining = 0;
     private String eventLog = "Ready at the cave mouth.";
     private boolean combatLogVisible = true;
     private final ArrayList<Item> inventory = new ArrayList<>();
@@ -335,6 +336,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         retreatButton.setOnClickListener(v -> stopActivity());
         combatButtonRow.addView(retreatButton, weightedWidth(1.0f));
         combatLogToggleButton = actionButton("Hide Log", false);
+        combatLogToggleButton.setTextColor(Color.rgb(245, 224, 177));
+        combatLogToggleButton.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(192, 125, 44)));
         combatLogToggleButton.setOnClickListener(v -> toggleCombatLog());
         combatButtonRow.addView(combatLogToggleButton, weightedWidth(1.0f));
         actionPanel.addView(combatButtonRow, buttonLayoutParams());
@@ -487,6 +490,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void processGameSteps(int steps) {
         lastGameSteps = todaySteps;
+        ageRewardBySteps(steps);
         if (chestReady && activityMode == MODE_DUNGEON) {
             autoChestCharge += steps;
             if (autoChestCharge >= 10) {
@@ -876,6 +880,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastRewardGold = 0;
         lastRewardItem = null;
         lastRewardFromChest = false;
+        rewardStepsRemaining = isImportantRewardMessage(title) ? 50 : 0;
     }
 
     private void setRewardGold(String title, String note, int goldReward) {
@@ -884,6 +889,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastRewardGold = goldReward;
         lastRewardItem = null;
         lastRewardFromChest = false;
+        rewardStepsRemaining = 50;
     }
 
     private void setRewardItem(String title, Item item, int goldReward, boolean fromChest) {
@@ -892,6 +898,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastRewardGold = goldReward;
         lastRewardItem = item;
         lastRewardFromChest = fromChest;
+        rewardStepsRemaining = 50;
+    }
+
+    private boolean isImportantRewardMessage(String title) {
+        return "Chest found".equals(title) || "Chest opened".equals(title);
+    }
+
+    private void ageRewardBySteps(int steps) {
+        if (rewardStepsRemaining <= 0 || steps <= 0) {
+            return;
+        }
+
+        rewardStepsRemaining = Math.max(0, rewardStepsRemaining - steps);
     }
 
     private void updateRewardView() {
@@ -900,6 +919,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         rewardContentView.removeAllViews();
+        rewardContentView.setVisibility(rewardStepsRemaining > 0 ? View.VISIBLE : View.GONE);
+        if (rewardStepsRemaining <= 0) {
+            return;
+        }
+
         TextView title = text(lastRewardTitle, 18, Color.rgb(245, 224, 177), true);
         rewardContentView.addView(title);
 
