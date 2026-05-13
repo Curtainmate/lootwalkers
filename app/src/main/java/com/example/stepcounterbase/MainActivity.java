@@ -48,8 +48,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private TextView enemyView;
     private TextView nextAttackView;
     private TextView actionMeterView;
-    private TextView lootView;
     private TextView eventLogView;
+    private LinearLayout rewardContentView;
     private LinearLayout equipmentListView;
     private LinearLayout inventoryListView;
     private LinearLayout dungeonPanel;
@@ -124,6 +124,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int autoChestCharge = 0;
     private long chestOpenedAt = 0L;
     private String lastReward = "No loot yet. Clear Goblin Cave I to open your first chest.";
+    private String lastRewardTitle = "Rewards";
+    private String lastRewardNote = "No loot yet. Clear Goblin Cave I to open your first chest.";
+    private Item lastRewardItem = null;
+    private int lastRewardGold = 0;
+    private boolean lastRewardFromChest = false;
     private String eventLog = "Ready at the cave mouth.";
     private final ArrayList<Item> inventory = new ArrayList<>();
 
@@ -326,8 +331,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightPanel.addView(actionPanel);
 
         combatInfoPanel = darkCard();
-        lootView = text("", 15, Color.rgb(226, 205, 163), false);
-        combatInfoPanel.addView(lootView);
+        rewardContentView = new LinearLayout(this);
+        rewardContentView.setOrientation(LinearLayout.VERTICAL);
+        combatInfoPanel.addView(rewardContentView);
         testStepsButton = actionButton("+100 test steps", false);
         testStepsButton.setOnClickListener(v -> addTestSteps(100));
         combatInfoPanel.addView(testStepsButton, buttonLayoutParams());
@@ -433,6 +439,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastGameSteps = todaySteps;
         fightScreen = FIGHT_COMBAT;
         lastReward = "Deep Forest farming started. Cave Goblins will keep appearing until you retreat.";
+        setRewardMessage("Possible drops", "Farm Cave Goblins for gold and early gear.");
         addEvent("Started farming Cave Goblins in Deep Forest.");
         saveState();
         updateViews();
@@ -458,6 +465,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastGameSteps = todaySteps;
         fightScreen = FIGHT_COMBAT;
         lastReward = "Goblin Cave I started. Steps now power combat.";
+        setRewardMessage("Rewards", "Defeat the Goblin Chief to earn a chest.");
         addEvent("Entered Goblin Cave I. A Cave Goblin appears.");
         saveState();
         updateViews();
@@ -549,9 +557,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 lastReward = "Cave Goblin dropped " + foundItem.rarity + " " + foundItem.name
                         + "\n" + itemStatLine(foundItem)
                         + "\nGold gained: " + goldReward;
+                setRewardItem("Last reward", foundItem, goldReward, false);
                 addEvent("Cave Goblin defeated. Found " + foundItem.name + ".");
             } else {
                 lastReward = "Cave Goblin defeated.\nGold gained: " + goldReward + "\nNo item drop this time.";
+                setRewardGold("Last reward", "Cave Goblin defeated. No item drop.", goldReward);
                 addEvent("Cave Goblin defeated. Another appears.");
             }
             phase = PHASE_COMBAT;
@@ -568,6 +578,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             phase = PHASE_COMPLETE;
             autoChestCharge = 0;
             lastReward = "The Goblin Chief is defeated. The chest opens automatically after 10 more steps.";
+            setRewardMessage("Chest found", "Walk 10 steps to open the boss chest.");
             addEvent("Goblin Chief defeated. Chest found.");
             return;
         }
@@ -610,6 +621,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 + "\nGold gained: " + goldReward
                 + "\nCurrent estimate: " + oldEstimate + " steps"
                 + "\nEquip it if you want to change your build.";
+        setRewardItem("Chest opened", foundItem, goldReward, true);
         addEvent("Chest opened: " + foundItem.rarity + " " + foundItem.name + ".");
         chestReady = false;
         activeRun = activityMode == MODE_DUNGEON;
@@ -647,6 +659,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         playerHp = state.playerHp;
         lastGameSteps = state.lastGameSteps;
         lastReward = state.lastReward;
+        setRewardMessage("Rewards", lastReward);
         eventLog = state.eventLog;
         chestOpenedAt = state.chestOpenedAt;
         autoChestCharge = state.autoChestCharge;
@@ -772,6 +785,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         playerHp = maxPlayerHp();
         chestOpenedAt = 0L;
         lastReward = "Prototype reset. Start Goblin Cave I when ready.";
+        setRewardMessage("Rewards", "Start a fight to earn gold and gear.");
         eventLog = "Prototype reset. Ready at the cave mouth.";
         saveState();
         updateViews();
@@ -804,7 +818,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         updateEquipmentView();
         updateInventoryView();
-        lootView.setText(combatInfoText());
+        updateRewardView();
         eventLogView.setText(eventLog);
         updateMainScreens();
 
@@ -843,9 +857,96 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return "Pick an activity to begin.";
     }
 
-    private String combatInfoText() {
-        String label = activityMode == MODE_AREA ? "Possible drops" : "Rewards";
-        return label + "\n" + lastReward + "\n\nEvent log\n" + eventLog;
+    private void setRewardMessage(String title, String note) {
+        lastRewardTitle = title;
+        lastRewardNote = note;
+        lastRewardGold = 0;
+        lastRewardItem = null;
+        lastRewardFromChest = false;
+    }
+
+    private void setRewardGold(String title, String note, int goldReward) {
+        lastRewardTitle = title;
+        lastRewardNote = note;
+        lastRewardGold = goldReward;
+        lastRewardItem = null;
+        lastRewardFromChest = false;
+    }
+
+    private void setRewardItem(String title, Item item, int goldReward, boolean fromChest) {
+        lastRewardTitle = title;
+        lastRewardNote = "Added to bag";
+        lastRewardGold = goldReward;
+        lastRewardItem = item;
+        lastRewardFromChest = fromChest;
+    }
+
+    private void updateRewardView() {
+        if (rewardContentView == null) {
+            return;
+        }
+
+        rewardContentView.removeAllViews();
+        TextView title = text(lastRewardTitle, 18, Color.rgb(245, 224, 177), true);
+        rewardContentView.addView(title);
+
+        if (lastRewardItem != null) {
+            rewardContentView.addView(rewardItemCard(lastRewardItem, lastRewardGold, lastRewardFromChest));
+            return;
+        }
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(8), dp(8), dp(8), dp(8));
+        card.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(lastRewardGold > 0 ? R.drawable.item_gold : R.drawable.chest_open);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(4), dp(4), dp(4), dp(4));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), Color.rgb(192, 125, 44)));
+        card.addView(icon, new LinearLayout.LayoutParams(dp(58), dp(58)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(10), 0, 0, 0);
+        copy.addView(text(lastRewardNote, 15, Color.rgb(245, 224, 177), true));
+        String goldLine = lastRewardGold > 0 ? "Gold gained: " + lastRewardGold : "No reward claimed yet.";
+        copy.addView(text(goldLine, 13, Color.rgb(226, 205, 163), false));
+        card.addView(copy, weightedWidth(1.0f));
+
+        rewardContentView.addView(card, buttonLayoutParams());
+    }
+
+    private LinearLayout rewardItemCard(Item item, int goldReward, boolean fromChest) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(8), dp(8), dp(8), dp(8));
+        card.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(itemIcon(item.slot));
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(4), dp(4), dp(4), dp(4));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), rarityColor(item.rarity)));
+        card.addView(icon, new LinearLayout.LayoutParams(dp(64), dp(64)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(10), 0, 0, 0);
+        copy.addView(text(fromChest ? "Chest reward" : "Enemy drop", 12, Color.rgb(192, 157, 100), true));
+        copy.addView(text(item.rarity + " " + item.name, 17, rarityColor(item.rarity), true));
+        copy.addView(text(itemStatLine(item), 13, Color.rgb(226, 205, 163), false));
+        copy.addView(text("Added to bag", 12, Color.rgb(139, 229, 87), true));
+        if (goldReward > 0) {
+            copy.addView(text("Gold gained: " + goldReward, 12, Color.rgb(245, 224, 177), false));
+        }
+        card.addView(copy, weightedWidth(1.0f));
+        return card;
     }
 
     private String progressText() {
@@ -1302,6 +1403,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         enemyAttackCharge = 0;
         autoChestCharge = 0;
         fightScreen = FIGHT_HUB;
+        setRewardMessage("Rewards", "Choose an activity to earn gold and gear.");
         addEvent("Returned to the Fight hub.");
         saveState();
         updateViews();
