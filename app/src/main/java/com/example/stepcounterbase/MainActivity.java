@@ -126,7 +126,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int mainTab = TAB_FIGHT;
     private int fightScreen = FIGHT_HUB;
     private int activityMode = MODE_NONE;
-    private int selectedArea = AREA_DEEP_FOREST;
+    private int selectedArea = AREA_GRASSY_FIELDS;
     private int autoChestCharge = 0;
     private long chestOpenedAt = 0L;
     private String lastReward = "No loot yet. Clear Goblin Cave I to open your first chest.";
@@ -260,13 +260,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         areasPanel = darkCard();
         areasPanel.addView(sectionTitle("AREAS"));
-        areasPanel.addView(adventureCard(R.drawable.card_areas_deep_forest, "Deep Forest", "A beginner forest path. Farm Cave Goblins for gold and early gear.", v -> showAreaEnemy(AREA_DEEP_FOREST)));
-        areasPanel.addView(testAreaCard(R.drawable.title_grassy_fields, v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
+        areasPanel.addView(adventureCard(R.drawable.title_grassy_fields, "Grassy Fields", "A sunny beginner meadow. This is the first main area we will build out.", v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
+        areasPanel.addView(testAreaCard(R.drawable.card_areas_deep_forest, v -> showAreaEnemy(AREA_DEEP_FOREST)));
         areasPanel.addView(backButton());
         fightPanel.addView(areasPanel);
 
         areaEnemyPanel = darkCard();
-        areaEnemyTitleView = sectionTitle("Deep Forest");
+        areaEnemyTitleView = sectionTitle("Grassy Fields");
         areaEnemyPanel.addView(areaEnemyTitleView);
         areaEnemyPanel.addView(adventureCard(R.drawable.portrait_cave_goblin, "Cave Goblin", "HP 75 | Max Hit 10 | Attack 115 steps", null));
         areaEnemyPanel.addView(detailRow("Possible drops", "Gold, sword, armor, boots, charm"));
