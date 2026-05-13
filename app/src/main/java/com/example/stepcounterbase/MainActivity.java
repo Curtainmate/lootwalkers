@@ -326,20 +326,24 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         enemyMeterIconView = ui.meterIcon(R.drawable.enemy_attack_icon);
         meterRow.addView(meterCard("Enemy Attack", enemyMeterIconView, enemyProgressBar, enemyView), weightedWidth(1.0f));
         actionPanel.addView(meterRow);
-        retreatButton = actionButton("Retreat from fight", false);
+
+        LinearLayout combatButtonRow = new LinearLayout(this);
+        combatButtonRow.setOrientation(LinearLayout.HORIZONTAL);
+        retreatButton = actionButton("Retreat", false);
         retreatButton.setTextColor(Color.rgb(245, 224, 177));
         retreatButton.setBackground(ui.panelBackground(Color.rgb(82, 34, 28), Color.rgb(188, 84, 58)));
         retreatButton.setOnClickListener(v -> stopActivity());
-        actionPanel.addView(retreatButton, buttonLayoutParams());
+        combatButtonRow.addView(retreatButton, weightedWidth(1.0f));
+        combatLogToggleButton = actionButton("Hide Log", false);
+        combatLogToggleButton.setOnClickListener(v -> toggleCombatLog());
+        combatButtonRow.addView(combatLogToggleButton, weightedWidth(1.0f));
+        actionPanel.addView(combatButtonRow, buttonLayoutParams());
         fightPanel.addView(actionPanel);
 
         combatInfoPanel = darkCard();
         rewardContentView = new LinearLayout(this);
         rewardContentView.setOrientation(LinearLayout.VERTICAL);
         combatInfoPanel.addView(rewardContentView);
-        combatLogToggleButton = actionButton("Hide combat log", false);
-        combatLogToggleButton.setOnClickListener(v -> toggleCombatLog());
-        combatInfoPanel.addView(combatLogToggleButton, buttonLayoutParams());
         combatLogContentView = new LinearLayout(this);
         combatLogContentView.setOrientation(LinearLayout.VERTICAL);
         combatInfoPanel.addView(combatLogContentView);
@@ -968,7 +972,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return;
         }
 
-        combatLogToggleButton.setText(combatLogVisible ? "Hide combat log" : "Show combat log");
+        combatLogToggleButton.setText(combatLogVisible ? "Hide Log" : "Show Log");
         combatLogContentView.removeAllViews();
         combatLogContentView.setVisibility(combatLogVisible ? View.VISIBLE : View.GONE);
         if (!combatLogVisible) {
