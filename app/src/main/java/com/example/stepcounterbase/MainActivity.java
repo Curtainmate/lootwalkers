@@ -33,6 +33,8 @@ import static com.example.stepcounterbase.GameRules.*;
 
 public class MainActivity extends Activity implements SensorEventListener, SceneView.Model {
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
+    private static final int AREA_DEEP_FOREST = 0;
+    private static final int AREA_GRASSY_FIELDS = 1;
     private final Random random = new Random();
 
     private SensorManager sensorManager;
@@ -49,6 +51,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private TextView nextAttackView;
     private TextView actionMeterView;
     private TextView eventLogView;
+    private TextView areaEnemyTitleView;
     private LinearLayout rewardContentView;
     private LinearLayout combatLogContentView;
     private LinearLayout equipmentListView;
@@ -123,6 +126,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int mainTab = TAB_FIGHT;
     private int fightScreen = FIGHT_HUB;
     private int activityMode = MODE_NONE;
+    private int selectedArea = AREA_DEEP_FOREST;
     private int autoChestCharge = 0;
     private long chestOpenedAt = 0L;
     private String lastReward = "No loot yet. Clear Goblin Cave I to open your first chest.";
@@ -256,12 +260,14 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         areasPanel = darkCard();
         areasPanel.addView(sectionTitle("AREAS"));
-        areasPanel.addView(adventureCard(R.drawable.title_grassy_fields, "Grassy Fields", "A sunny beginner meadow. Farm Cave Goblins here while we test the new zone art.", v -> showFightScreen(FIGHT_AREA_ENEMY)));
+        areasPanel.addView(adventureCard(R.drawable.card_areas_deep_forest, "Deep Forest", "A beginner forest path. Farm Cave Goblins for gold and early gear.", v -> showAreaEnemy(AREA_DEEP_FOREST)));
+        areasPanel.addView(testAreaCard(R.drawable.title_grassy_fields, v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
         areasPanel.addView(backButton());
         fightPanel.addView(areasPanel);
 
         areaEnemyPanel = darkCard();
-        areaEnemyPanel.addView(sectionTitle("Grassy Fields"));
+        areaEnemyTitleView = sectionTitle("Deep Forest");
+        areaEnemyPanel.addView(areaEnemyTitleView);
         areaEnemyPanel.addView(adventureCard(R.drawable.portrait_cave_goblin, "Cave Goblin", "HP 75 | Max Hit 10 | Attack 115 steps", null));
         areaEnemyPanel.addView(detailRow("Possible drops", "Gold, sword, armor, boots, charm"));
         Button startArea = actionButton("Farm Cave Goblin", true);
@@ -454,9 +460,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         playerHp = maxPlayerHp();
         lastGameSteps = todaySteps;
         fightScreen = FIGHT_COMBAT;
-        lastReward = "Grassy Fields farming started. Cave Goblins will keep appearing until you retreat.";
+        lastReward = areaName() + " farming started. Cave Goblins will keep appearing until you retreat.";
         setRewardMessage("Possible drops", "Farm Cave Goblins for gold and early gear.");
-        addEvent("Started farming Cave Goblins in Grassy Fields.");
+        addEvent("Started farming Cave Goblins in " + areaName() + ".");
         saveState();
         updateViews();
         startListeningIfReady();
@@ -856,12 +862,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private String activityTitle() {
         if (activityMode == MODE_AREA) {
-            return "Grassy Fields";
+            return areaName();
         }
         if (activityMode == MODE_DUNGEON || chestReady) {
             return "Goblin Cave I";
         }
         return "Fight";
+    }
+
+    private String areaName() {
+        return selectedArea == AREA_GRASSY_FIELDS ? "Grassy Fields" : "Deep Forest";
     }
 
     private String activityStatus() {
@@ -1363,6 +1373,41 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return row;
     }
 
+    private FrameLayout testAreaCard(int drawableRes, View.OnClickListener listener) {
+        FrameLayout card = new FrameLayout(this);
+        card.setPadding(dp(8), dp(8), dp(8), dp(8));
+        card.setBackground(ui.panelBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+        card.setClickable(true);
+        card.setOnClickListener(listener);
+
+        ImageView image = new ImageView(this);
+        image.setImageResource(drawableRes);
+        image.setAdjustViewBounds(true);
+        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        image.setBackgroundColor(Color.rgb(13, 16, 12));
+        card.addView(image, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                dp(140),
+                Gravity.CENTER
+        ));
+
+        TextView badge = text("TEST AREA", 12, Color.rgb(245, 224, 177), true);
+        badge.setGravity(Gravity.CENTER);
+        badge.setPadding(dp(8), dp(4), dp(8), dp(4));
+        badge.setBackground(ui.panelBackground(Color.rgb(82, 34, 28), Color.rgb(240, 174, 55)));
+        FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.RIGHT | Gravity.TOP
+        );
+        badgeParams.setMargins(0, dp(12), dp(12), 0);
+        card.addView(badge, badgeParams);
+
+        LinearLayout.LayoutParams params = buttonLayoutParams();
+        card.setLayoutParams(params);
+        return card;
+    }
+
     private void showItemDetails(Item item) {
         boolean equipped = isEquipped(item);
         Item current = equippedForSlot(item.slot);
@@ -1493,6 +1538,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         saveState();
     }
 
+    private void showAreaEnemy(int area) {
+        selectedArea = area;
+        showFightScreen(FIGHT_AREA_ENEMY);
+    }
+
     private void updateMainScreens() {
         if (fightPanel == null) {
             return;
@@ -1500,6 +1550,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         if (activeRun || chestReady) {
             fightScreen = FIGHT_COMBAT;
+        }
+
+        if (areaEnemyTitleView != null) {
+            areaEnemyTitleView.setText(areaName());
         }
 
         fightPanel.setVisibility(mainTab == TAB_FIGHT ? View.VISIBLE : View.GONE);
@@ -2031,6 +2085,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     @Override
     public boolean sceneUseGrassyFields() {
-        return activityMode == MODE_AREA;
+        return activityMode == MODE_AREA && selectedArea == AREA_GRASSY_FIELDS;
     }
 }
