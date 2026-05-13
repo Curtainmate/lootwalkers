@@ -34,6 +34,9 @@ final class SceneView extends View {
     }
 
     private static final int FRAME_COUNT = 4;
+    private static final int HERO_BASELINE_OFFSET_DP = -8;
+    private static final int GOBLIN_BASELINE_OFFSET_DP = 0;
+    private static final int BOSS_BASELINE_OFFSET_DP = 0;
 
     private final Model model;
     private final Bitmap background;
@@ -72,7 +75,7 @@ final class SceneView extends View {
         int ground = (int) (getHeight() * 0.88f);
         int heroSize = Math.min(dp(112), (int) (getHeight() * 0.78f));
         int heroX = dp(24);
-        int heroY = ground - heroSize;
+        int heroY = ground - heroSize + dp(HERO_BASELINE_OFFSET_DP);
         drawFrame(canvas, heroSheet, frame, heroX, heroY, heroSize, heroSize);
         drawHpBar(canvas, heroX, heroY - dp(18), heroSize, model.scenePlayerHp(), model.scenePlayerMaxHp(), "Arin");
 
@@ -83,7 +86,7 @@ final class SceneView extends View {
                     ? Math.min(dp(145), (int) (getHeight() * 0.88f))
                     : Math.min(dp(112), (int) (getHeight() * 0.75f));
             int enemyX = getWidth() - enemySize - dp(22);
-            int enemyY = ground - enemySize;
+            int enemyY = ground - enemySize + dp(boss ? BOSS_BASELINE_OFFSET_DP : GOBLIN_BASELINE_OFFSET_DP);
             drawFrame(canvas, enemySheet, frame, enemyX, enemyY, enemySize, enemySize);
             drawHpBar(canvas, enemyX, enemyY - dp(18), enemySize, Math.max(0, model.sceneEnemyHp()),
                     model.sceneEnemyMaxHp(), model.sceneEnemyName());
