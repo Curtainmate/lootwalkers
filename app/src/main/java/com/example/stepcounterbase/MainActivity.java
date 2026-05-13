@@ -50,6 +50,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private TextView actionMeterView;
     private TextView eventLogView;
     private LinearLayout rewardContentView;
+    private LinearLayout combatLogContentView;
     private LinearLayout equipmentListView;
     private LinearLayout inventoryListView;
     private LinearLayout dungeonPanel;
@@ -91,6 +92,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Button resetButton;
     private Button testStepsButton;
     private Button testBigStepsButton;
+    private Button combatLogToggleButton;
 
     private int baseline = -1;
     private int todaySteps = 0;
@@ -130,6 +132,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int lastRewardGold = 0;
     private boolean lastRewardFromChest = false;
     private String eventLog = "Ready at the cave mouth.";
+    private boolean combatLogVisible = true;
     private final ArrayList<Item> inventory = new ArrayList<>();
 
     @Override
@@ -334,6 +337,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         rewardContentView = new LinearLayout(this);
         rewardContentView.setOrientation(LinearLayout.VERTICAL);
         combatInfoPanel.addView(rewardContentView);
+        combatLogToggleButton = actionButton("Hide combat log", false);
+        combatLogToggleButton.setOnClickListener(v -> toggleCombatLog());
+        combatInfoPanel.addView(combatLogToggleButton, buttonLayoutParams());
+        combatLogContentView = new LinearLayout(this);
+        combatLogContentView.setOrientation(LinearLayout.VERTICAL);
+        combatInfoPanel.addView(combatLogContentView);
         testStepsButton = actionButton("+100 test steps", false);
         testStepsButton.setOnClickListener(v -> addTestSteps(100));
         combatInfoPanel.addView(testStepsButton, buttonLayoutParams());
@@ -819,7 +828,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         updateEquipmentView();
         updateInventoryView();
         updateRewardView();
-        eventLogView.setText(eventLog);
+        updateCombatLogView();
         updateMainScreens();
 
         if (!hasSensor) {
@@ -947,6 +956,99 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
         card.addView(copy, weightedWidth(1.0f));
         return card;
+    }
+
+    private void toggleCombatLog() {
+        combatLogVisible = !combatLogVisible;
+        updateCombatLogView();
+    }
+
+    private void updateCombatLogView() {
+        if (combatLogContentView == null || combatLogToggleButton == null) {
+            return;
+        }
+
+        combatLogToggleButton.setText(combatLogVisible ? "Hide combat log" : "Show combat log");
+        combatLogContentView.removeAllViews();
+        combatLogContentView.setVisibility(combatLogVisible ? View.VISIBLE : View.GONE);
+        if (!combatLogVisible) {
+            return;
+        }
+
+        TextView title = text("Combat log", 18, Color.rgb(245, 224, 177), true);
+        title.setPadding(0, dp(4), 0, dp(4));
+        combatLogContentView.addView(title);
+
+        String[] lines = eventLog.split("\\n");
+        int shown = 0;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+
+            combatLogContentView.addView(combatLogRow(trimmed));
+            shown += 1;
+            if (shown >= 5) {
+                break;
+            }
+        }
+
+        if (shown == 0) {
+            combatLogContentView.addView(text("No events yet.", 13, Color.rgb(226, 205, 163), false));
+        }
+    }
+
+    private LinearLayout combatLogRow(String event) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(7), dp(6), dp(7), dp(6));
+        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(80, 58, 35)));
+
+        String tag = combatLogTag(event);
+        TextView tagView = text(tag, 10, combatLogTagColor(tag), true);
+        tagView.setGravity(Gravity.CENTER);
+        row.addView(tagView, new LinearLayout.LayoutParams(dp(44), LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextView eventView = text(event, 13, Color.rgb(226, 205, 163), false);
+        eventView.setPadding(dp(8), 0, 0, 0);
+        row.addView(eventView, weightedWidth(1.0f));
+
+        LinearLayout.LayoutParams params = buttonLayoutParams();
+        params.setMargins(0, 0, 0, dp(6));
+        row.setLayoutParams(params);
+        return row;
+    }
+
+    private String combatLogTag(String event) {
+        String lower = event.toLowerCase(Locale.US);
+        if (lower.contains("opened") || lower.contains("found") || lower.contains("drop")) {
+            return "LOOT";
+        }
+        if (lower.contains("hits") || lower.contains("attacks") || lower.contains("dodge")) {
+            return lower.startsWith("arin") || lower.contains("sword") || lower.contains("punch") ? "ATK" : "DMG";
+        }
+        if (lower.contains("recover") || lower.contains("exhausted")) {
+            return "REC";
+        }
+        return "INFO";
+    }
+
+    private int combatLogTagColor(String tag) {
+        if ("LOOT".equals(tag)) {
+            return Color.rgb(139, 229, 87);
+        }
+        if ("ATK".equals(tag)) {
+            return Color.rgb(78, 159, 255);
+        }
+        if ("DMG".equals(tag)) {
+            return Color.rgb(238, 104, 80);
+        }
+        if ("REC".equals(tag)) {
+            return Color.rgb(245, 224, 177);
+        }
+        return Color.rgb(192, 157, 100);
     }
 
     private String progressText() {
