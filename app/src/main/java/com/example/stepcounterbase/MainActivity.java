@@ -48,6 +48,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private TextView dateView;
     private TextView todayStepsView;
+    private TextView goldView;
     private TextView dungeonTitleView;
     private TextView dungeonStatusView;
     private TextView progressDetailView;
@@ -67,6 +68,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private LinearLayout combatHeaderPanel;
     private LinearLayout scenePanel;
     private LinearLayout actionPanel;
+    private LinearLayout combatConsolePanel;
     private LinearLayout fightPanel;
     private LinearLayout skillsPanel;
     private LinearLayout bagPanel;
@@ -235,17 +237,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         topHud.setOrientation(LinearLayout.HORIZONTAL);
         topHud.setGravity(Gravity.CENTER_VERTICAL);
 
-        preferencesButton = new ImageView(this);
-        preferencesButton.setImageResource(R.drawable.preference_icon);
-        preferencesButton.setAdjustViewBounds(true);
-        preferencesButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        preferencesButton.setPadding(dp(6), dp(6), dp(6), dp(6));
-        preferencesButton.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(126, 82, 37)));
-        preferencesButton.setClickable(true);
-        preferencesButton.setOnClickListener(v -> showPreferencesDialog());
-        LinearLayout.LayoutParams preferencesParams = new LinearLayout.LayoutParams(dp(44), dp(44));
-        preferencesParams.setMargins(0, 0, dp(9), 0);
-        topHud.addView(preferencesButton, preferencesParams);
+        FrameLayout portraitFrame = new FrameLayout(this);
+        ImageView portraitView = new ImageView(this);
+        portraitView.setImageResource(R.drawable.portrait_arin);
+        portraitView.setAdjustViewBounds(true);
+        portraitView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        portraitView.setPadding(dp(2), dp(2), dp(2), dp(2));
+        portraitView.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(126, 82, 37)));
+        portraitFrame.addView(portraitView, new FrameLayout.LayoutParams(dp(58), dp(58)));
+
+        LinearLayout.LayoutParams portraitParams = new LinearLayout.LayoutParams(dp(58), dp(58));
+        portraitParams.setMargins(0, 0, dp(8), 0);
+        topHud.addView(portraitFrame, portraitParams);
 
         LinearLayout heroHud = new LinearLayout(this);
         heroHud.setOrientation(LinearLayout.VERTICAL);
@@ -253,15 +256,29 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         heroHud.addView(nameView);
         dateView = text("Lv. 1", 15, Color.rgb(192, 157, 100), true);
         heroHud.addView(dateView);
-        topHud.addView(heroHud, weightedWidth(1.0f));
+        topHud.addView(heroHud, weightedWidth(0.9f));
 
         LinearLayout statHud = new LinearLayout(this);
         statHud.setOrientation(LinearLayout.VERTICAL);
-        statHud.setGravity(Gravity.RIGHT);
-        todayStepsView = text("", 17, Color.rgb(245, 224, 177), true);
-        todayStepsView.setGravity(Gravity.RIGHT);
-        statHud.addView(todayStepsView);
-        topHud.addView(statHud, weightedWidth(1.25f));
+        statHud.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        todayStepsView = text("", 18, Color.rgb(245, 224, 177), true);
+        goldView = text("", 18, Color.rgb(245, 224, 177), true);
+        statHud.addView(topHudStatRow(R.drawable.steps_icon, todayStepsView));
+        statHud.addView(topHudStatRow(R.drawable.coin_icon, goldView));
+        topHud.addView(statHud, weightedWidth(1.35f));
+
+        preferencesButton = new ImageView(this);
+        preferencesButton.setImageResource(R.drawable.preference_icon);
+        preferencesButton.setAdjustViewBounds(true);
+        preferencesButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        preferencesButton.setPadding(dp(3), dp(3), dp(3), dp(3));
+        preferencesButton.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(126, 82, 37)));
+        preferencesButton.setClickable(true);
+        preferencesButton.setOnClickListener(v -> showPreferencesDialog());
+        LinearLayout.LayoutParams preferencesParams = new LinearLayout.LayoutParams(dp(26), dp(26));
+        preferencesParams.gravity = Gravity.TOP;
+        preferencesParams.setMargins(dp(8), dp(2), 0, 0);
+        topHud.addView(preferencesButton, preferencesParams);
         screen.addView(topHud);
 
         fightPanel = new LinearLayout(this);
@@ -301,7 +318,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         dungeonsPanel = darkCard();
         fightPanel.addView(dungeonsPanel);
 
-        combatHeaderPanel = darkCard();
+        combatConsolePanel = darkCard();
+
+        combatHeaderPanel = new LinearLayout(this);
+        combatHeaderPanel.setOrientation(LinearLayout.VERTICAL);
+        combatHeaderPanel.setPadding(0, 0, 0, dp(8));
         dungeonTitleView = text("", 22, Color.rgb(245, 224, 177), true);
         combatHeaderPanel.addView(dungeonTitleView);
         dungeonStatusView = text("", 14, Color.rgb(192, 157, 100), false);
@@ -312,15 +333,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         combatHeaderPanel.addView(dungeonProgressBar, progressLayoutParams());
         progressDetailView = text("", 14, Color.rgb(245, 224, 177), false);
         progressDetailView.setPadding(0, dp(6), 0, 0);
-        fightPanel.addView(combatHeaderPanel);
+        combatConsolePanel.addView(combatHeaderPanel);
 
-        scenePanel = darkCard();
-        scenePanel.setPadding(dp(4), dp(4), dp(4), dp(4));
+        scenePanel = new LinearLayout(this);
+        scenePanel.setOrientation(LinearLayout.VERTICAL);
+        scenePanel.setPadding(0, 0, 0, 0);
         sceneView = new SceneView(this, this);
         scenePanel.addView(sceneView, sceneLayoutParams());
-        fightPanel.addView(scenePanel);
+        combatConsolePanel.addView(scenePanel);
 
-        actionPanel = darkCard();
+        actionPanel = new LinearLayout(this);
+        actionPanel.setOrientation(LinearLayout.VERTICAL);
+        actionPanel.setPadding(0, dp(8), 0, 0);
         TextView actionTitle = text("WALK TO ACT", 18, Color.rgb(245, 224, 177), true);
         actionTitle.setGravity(Gravity.CENTER);
         actionPanel.addView(actionTitle);
@@ -355,7 +379,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         combatLogToggleButton.setOnClickListener(v -> toggleCombatLog());
         combatButtonRow.addView(combatLogToggleButton, weightedWidth(1.0f));
         actionPanel.addView(combatButtonRow, buttonLayoutParams());
-        fightPanel.addView(actionPanel);
+        combatConsolePanel.addView(actionPanel);
+        fightPanel.addView(combatConsolePanel);
 
         combatInfoPanel = darkCard();
         rewardContentView = new LinearLayout(this);
@@ -847,6 +872,26 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         dialog.show();
     }
 
+    private LinearLayout topHudStatRow(int iconRes, TextView valueView) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(1), dp(1), dp(1), dp(1));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(22), dp(22));
+        iconParams.setMargins(0, 0, dp(7), 0);
+        row.addView(icon, iconParams);
+
+        valueView.setGravity(Gravity.RIGHT);
+        valueView.setSingleLine(true);
+        row.addView(valueView);
+        return row;
+    }
+
     private void updateViews() {
         if (todayStepsView == null) {
             return;
@@ -855,7 +900,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         boolean hasSensor = stepCounterSensor != null;
         boolean hasPermission = hasStepPermission();
         dateView.setText("Lv. 1");
-        todayStepsView.setText("Steps today: " + todaySteps + "\nGold: " + gold);
+        todayStepsView.setText(String.valueOf(todaySteps));
+        goldView.setText(String.valueOf(gold));
 
         dungeonTitleView.setText(activityTitle());
         dungeonStatusView.setText(activityStatus());
@@ -891,7 +937,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         } else if (chestReady) {
             systemView.setText("Dungeon clear. Walk 10 steps to open the chest.");
         } else {
-            systemView.setText("Choose Fight, Skills, Bag, or Town from the main menu.");
+            systemView.setText("");
         }
     }
 
@@ -1758,9 +1804,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         areasPanel.setVisibility(fightScreen == FIGHT_AREAS ? View.VISIBLE : View.GONE);
         areaEnemyPanel.setVisibility(fightScreen == FIGHT_AREA_ENEMY ? View.VISIBLE : View.GONE);
         dungeonsPanel.setVisibility(fightScreen == FIGHT_DUNGEONS ? View.VISIBLE : View.GONE);
-        combatHeaderPanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
-        scenePanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
-        actionPanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
+        combatConsolePanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
         combatInfoPanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
 
         styleTabButton(fightNavButton, mainTab == TAB_FIGHT);

@@ -163,7 +163,7 @@ final class UiFactory {
     }
 
     LinearLayout meterCard(String title, ImageView icon, ProgressBar bar, TextView valueView) {
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(38), dp(38));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(34), dp(34));
         return meterCard(title, icon, iconParams, bar, valueView);
     }
 
@@ -182,7 +182,7 @@ final class UiFactory {
         LinearLayout card = new LinearLayout(context);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(8), dp(8), dp(8), dp(8));
-        card.setBackground(cardBackground(Color.rgb(24, 21, 17), Color.rgb(80, 58, 35)));
+        card.setBackground(cardBackground(Color.rgb(24, 21, 17), Color.rgb(55, 43, 31)));
 
         LinearLayout header = new LinearLayout(context);
         header.setOrientation(LinearLayout.HORIZONTAL);
