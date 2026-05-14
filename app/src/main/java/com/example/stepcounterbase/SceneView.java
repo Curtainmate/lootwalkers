@@ -28,22 +28,37 @@ final class SceneView extends View {
 
         String sceneEnemyName();
 
+        boolean sceneEnemyIsGreenSlime();
+
+        boolean sceneEnemyIsRunawayScarecrow();
+
+        boolean sceneEnemyIsRaggedBandit();
+
         boolean sceneChestReady();
 
         long sceneChestOpenedAt();
+
+        boolean sceneUseGrassyFields();
     }
 
     private static final int FRAME_COUNT = 4;
     private static final int HERO_BASELINE_OFFSET_DP = -8;
     private static final int GOBLIN_BASELINE_OFFSET_DP = 0;
     private static final int BOSS_BASELINE_OFFSET_DP = 0;
+    private static final int SLIME_BASELINE_OFFSET_DP = 5;
+    private static final int SCARECROW_BASELINE_OFFSET_DP = -5;
+    private static final int BANDIT_BASELINE_OFFSET_DP = -4;
 
     private final Model model;
-    private final Bitmap background;
+    private final Bitmap caveBackground;
+    private final Bitmap grassyFieldsBackground;
     private final Bitmap heroIdle;
     private final Bitmap heroWalk;
     private final Bitmap goblin;
     private final Bitmap goblinBoss;
+    private final Bitmap greenSlime;
+    private final Bitmap runawayScarecrow;
+    private final Bitmap raggedBandit;
     private final Bitmap chestOpening;
     private final Paint paint = new Paint();
     private final Paint shadePaint = new Paint();
@@ -53,11 +68,15 @@ final class SceneView extends View {
     SceneView(Context context, Model model) {
         super(context);
         this.model = model;
-        background = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_dungeon);
+        caveBackground = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_dungeon);
+        grassyFieldsBackground = BitmapFactory.decodeResource(getResources(), R.drawable.background_grassy_fields);
         heroIdle = BitmapFactory.decodeResource(getResources(), R.drawable.hero_idle);
         heroWalk = BitmapFactory.decodeResource(getResources(), R.drawable.hero_walk);
         goblin = BitmapFactory.decodeResource(getResources(), R.drawable.goblin);
         goblinBoss = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_boss);
+        greenSlime = BitmapFactory.decodeResource(getResources(), R.drawable.green_slime_enemy_sprites);
+        runawayScarecrow = BitmapFactory.decodeResource(getResources(), R.drawable.runaway_scarecrow_enemy_sprites);
+        raggedBandit = BitmapFactory.decodeResource(getResources(), R.drawable.ragged_bandit_enemy_sprites);
         chestOpening = BitmapFactory.decodeResource(getResources(), R.drawable.chest_opening);
         shadePaint.setColor(Color.argb(70, 0, 0, 0));
         paint.setAntiAlias(false);
@@ -81,12 +100,25 @@ final class SceneView extends View {
 
         if (model.sceneShouldShowEnemy()) {
             boolean boss = model.sceneIsBossFight();
-            Bitmap enemySheet = boss ? goblinBoss : goblin;
+            boolean slime = model.sceneEnemyIsGreenSlime();
+            boolean scarecrow = model.sceneEnemyIsRunawayScarecrow();
+            boolean bandit = model.sceneEnemyIsRaggedBandit();
+            Bitmap enemySheet = bandit ? raggedBandit : (scarecrow ? runawayScarecrow : (slime ? greenSlime : (boss ? goblinBoss : goblin)));
             int enemySize = boss
                     ? Math.min(dp(145), (int) (getHeight() * 0.88f))
+                    : slime
+                    ? Math.min(dp(96), (int) (getHeight() * 0.58f))
+                    : scarecrow
+                    ? Math.min(dp(118), (int) (getHeight() * 0.76f))
+                    : bandit
+                    ? Math.min(dp(108), (int) (getHeight() * 0.72f))
                     : Math.min(dp(112), (int) (getHeight() * 0.75f));
             int enemyX = getWidth() - enemySize - dp(22);
-            int enemyY = ground - enemySize + dp(boss ? BOSS_BASELINE_OFFSET_DP : GOBLIN_BASELINE_OFFSET_DP);
+            int enemyBaselineOffset = boss ? BOSS_BASELINE_OFFSET_DP
+                    : (slime ? SLIME_BASELINE_OFFSET_DP
+                    : (scarecrow ? SCARECROW_BASELINE_OFFSET_DP
+                    : (bandit ? BANDIT_BASELINE_OFFSET_DP : GOBLIN_BASELINE_OFFSET_DP)));
+            int enemyY = ground - enemySize + dp(enemyBaselineOffset);
             drawFrame(canvas, enemySheet, frame, enemyX, enemyY, enemySize, enemySize);
             drawHpBar(canvas, enemyX, enemyY - dp(18), enemySize, Math.max(0, model.sceneEnemyHp()),
                     model.sceneEnemyMaxHp(), model.sceneEnemyName());
@@ -106,6 +138,7 @@ final class SceneView extends View {
     }
 
     private void drawBackground(Canvas canvas) {
+        Bitmap background = model.sceneUseGrassyFields() ? grassyFieldsBackground : caveBackground;
         if (background == null) {
             canvas.drawColor(Color.rgb(35, 45, 39));
             return;

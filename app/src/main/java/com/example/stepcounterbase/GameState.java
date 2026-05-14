@@ -10,6 +10,7 @@ final class GameState {
 
     boolean activeRun = false;
     boolean chestReady = false;
+    boolean showDevTools = false;
     int phase = 0;
     int encounterIndex = 0;
     int travelLeft = 0;
@@ -31,6 +32,8 @@ final class GameState {
     int mainTab = 0;
     int fightScreen = 0;
     int activityMode = 0;
+    int selectedArea = 1;
+    int selectedAreaEnemy = 0;
     int autoChestCharge = 0;
     long chestOpenedAt = 0L;
     String lastReward = "";
