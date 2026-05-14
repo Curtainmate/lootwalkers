@@ -5,6 +5,7 @@ final class GameRules {
     static final String SLOT_ARMOR = "armor";
     static final String SLOT_BOOTS = "boots";
     static final String SLOT_CHARM = "charm";
+    static final String SLOT_LOOT = "loot";
 
     static final int PHASE_TRAVEL = 0;
     static final int PHASE_COMBAT = 1;

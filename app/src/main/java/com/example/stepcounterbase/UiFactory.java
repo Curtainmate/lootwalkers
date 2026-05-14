@@ -63,8 +63,14 @@ final class UiFactory {
         button.setText(label);
         button.setTextSize(15);
         button.setAllCaps(false);
-        button.setTextColor(primary ? Color.WHITE : Color.rgb(46, 34, 28));
-        button.setBackgroundResource(primary ? R.drawable.button_primary : R.drawable.button_secondary);
+        button.setTextColor(Color.rgb(245, 224, 177));
+        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        button.setBackground(cardBackground(
+                primary ? Color.rgb(129, 83, 31) : Color.rgb(36, 30, 22),
+                primary ? Color.rgb(240, 174, 55) : Color.rgb(126, 82, 37)
+        ));
+        button.setMinHeight(dp(48));
+        button.setPadding(dp(8), 0, dp(8), 0);
         return button;
     }
 

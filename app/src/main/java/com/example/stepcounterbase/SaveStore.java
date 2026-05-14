@@ -15,6 +15,7 @@ final class SaveStore {
     private static final String TODAY_STEPS_KEY = "today_steps";
     private static final String DEBUG_STEP_OFFSET_KEY = "debug_step_offset";
     private static final String ACTIVE_KEY = "active_run";
+    private static final String SHOW_DEV_TOOLS_KEY = "show_dev_tools";
     private static final String PHASE_KEY = "phase";
     private static final String ENCOUNTER_KEY = "encounter";
     private static final String TRAVEL_LEFT_KEY = "travel_left";
@@ -31,6 +32,8 @@ final class SaveStore {
     private static final String ACTIVITY_MODE_KEY = "activity_mode";
     private static final String MAIN_TAB_KEY = "main_tab";
     private static final String FIGHT_SCREEN_KEY = "fight_screen";
+    private static final String SELECTED_AREA_KEY = "selected_area";
+    private static final String SELECTED_AREA_ENEMY_KEY = "selected_area_enemy";
     private static final String GOLD_KEY = "gold";
     private static final String WEAPON_LEVEL_KEY = "weapon_level";
     private static final String ARMOR_LEVEL_KEY = "armor_level";
@@ -66,6 +69,7 @@ final class SaveStore {
 
         state.activeRun = prefs.getBoolean(ACTIVE_KEY, false);
         state.chestReady = prefs.getBoolean(CHEST_READY_KEY, false);
+        state.showDevTools = prefs.getBoolean(SHOW_DEV_TOOLS_KEY, false);
         state.phase = prefs.getInt(PHASE_KEY, 0);
         state.encounterIndex = prefs.getInt(ENCOUNTER_KEY, 0);
         state.travelLeft = prefs.getInt(TRAVEL_LEFT_KEY, 0);
@@ -81,6 +85,8 @@ final class SaveStore {
         state.activityMode = prefs.getInt(ACTIVITY_MODE_KEY, state.activeRun || state.chestReady ? MODE_DUNGEON : MODE_NONE);
         state.mainTab = prefs.getInt(MAIN_TAB_KEY, 0);
         state.fightScreen = prefs.getInt(FIGHT_SCREEN_KEY, state.activeRun || state.chestReady ? FIGHT_COMBAT : FIGHT_HUB);
+        state.selectedArea = prefs.getInt(SELECTED_AREA_KEY, 1);
+        state.selectedAreaEnemy = prefs.getInt(SELECTED_AREA_ENEMY_KEY, 0);
         state.gold = prefs.getInt(GOLD_KEY, 0);
         state.weaponLevel = prefs.getInt(WEAPON_LEVEL_KEY, 1);
         state.armorLevel = prefs.getInt(ARMOR_LEVEL_KEY, 1);
@@ -103,6 +109,7 @@ final class SaveStore {
                 .putInt(DEBUG_STEP_OFFSET_KEY, state.debugStepOffset)
                 .putBoolean(ACTIVE_KEY, state.activeRun)
                 .putBoolean(CHEST_READY_KEY, state.chestReady)
+                .putBoolean(SHOW_DEV_TOOLS_KEY, state.showDevTools)
                 .putInt(PHASE_KEY, state.phase)
                 .putInt(ENCOUNTER_KEY, state.encounterIndex)
                 .putInt(TRAVEL_LEFT_KEY, state.travelLeft)
@@ -118,6 +125,8 @@ final class SaveStore {
                 .putInt(ACTIVITY_MODE_KEY, state.activityMode)
                 .putInt(MAIN_TAB_KEY, state.mainTab)
                 .putInt(FIGHT_SCREEN_KEY, state.fightScreen)
+                .putInt(SELECTED_AREA_KEY, state.selectedArea)
+                .putInt(SELECTED_AREA_ENEMY_KEY, state.selectedAreaEnemy)
                 .putInt(GOLD_KEY, state.gold)
                 .putInt(WEAPON_LEVEL_KEY, state.weaponLevel)
                 .putInt(ARMOR_LEVEL_KEY, state.armorLevel)

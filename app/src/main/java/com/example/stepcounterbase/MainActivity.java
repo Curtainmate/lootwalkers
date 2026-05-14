@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -35,6 +36,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
     private static final int AREA_DEEP_FOREST = 0;
     private static final int AREA_GRASSY_FIELDS = 1;
+    private static final int AREA_ENEMY_GREEN_SLIME = 0;
+    private static final int AREA_ENEMY_RUNAWAY_SCARECROW = 1;
+    private static final int AREA_ENEMY_RAGGED_BANDIT = 2;
     private final Random random = new Random();
 
     private SensorManager sensorManager;
@@ -71,7 +75,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private LinearLayout areasPanel;
     private LinearLayout areaEnemyPanel;
     private LinearLayout dungeonsPanel;
-    private LinearLayout dungeonDetailPanel;
     private LinearLayout combatInfoPanel;
     private Button dungeonTabButton;
     private Button inventoryTabButton;
@@ -95,7 +98,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Button resetButton;
     private Button testStepsButton;
     private Button testBigStepsButton;
+    private ImageView preferencesButton;
     private Button combatLogToggleButton;
+    private boolean dungeonLootVisible = false;
+    private boolean showDevTools = false;
 
     private int baseline = -1;
     private int todaySteps = 0;
@@ -127,6 +133,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int fightScreen = FIGHT_HUB;
     private int activityMode = MODE_NONE;
     private int selectedArea = AREA_GRASSY_FIELDS;
+    private int selectedAreaEnemy = AREA_ENEMY_GREEN_SLIME;
+    private int expandedAreaLootEnemy = -1;
     private int autoChestCharge = 0;
     private long chestOpenedAt = 0L;
     private String lastReward = "No loot yet. Clear Goblin Cave I to open your first chest.";
@@ -135,6 +143,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Item lastRewardItem = null;
     private int lastRewardGold = 0;
     private boolean lastRewardFromChest = false;
+    private final ArrayList<Item> lastRewardItems = new ArrayList<>();
     private int rewardStepsRemaining = 0;
     private String eventLog = "Ready at the cave mouth.";
     private boolean combatLogVisible = true;
@@ -225,6 +234,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         LinearLayout topHud = darkCard();
         topHud.setOrientation(LinearLayout.HORIZONTAL);
         topHud.setGravity(Gravity.CENTER_VERTICAL);
+
+        preferencesButton = new ImageView(this);
+        preferencesButton.setImageResource(R.drawable.preference_icon);
+        preferencesButton.setAdjustViewBounds(true);
+        preferencesButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        preferencesButton.setPadding(dp(6), dp(6), dp(6), dp(6));
+        preferencesButton.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(126, 82, 37)));
+        preferencesButton.setClickable(true);
+        preferencesButton.setOnClickListener(v -> showPreferencesDialog());
+        LinearLayout.LayoutParams preferencesParams = new LinearLayout.LayoutParams(dp(44), dp(44));
+        preferencesParams.setMargins(0, 0, dp(9), 0);
+        topHud.addView(preferencesButton, preferencesParams);
+
         LinearLayout heroHud = new LinearLayout(this);
         heroHud.setOrientation(LinearLayout.VERTICAL);
         TextView nameView = text("Arin", 23, Color.rgb(245, 224, 177), true);
@@ -268,30 +290,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         areaEnemyPanel = darkCard();
         areaEnemyTitleView = sectionTitle("Grassy Fields");
         areaEnemyPanel.addView(areaEnemyTitleView);
-        areaEnemyPanel.addView(adventureCard(R.drawable.portrait_cave_goblin, "Cave Goblin", "HP 75 | Max Hit 10 | Attack 115 steps", null));
-        areaEnemyPanel.addView(detailRow("Possible drops", "Gold, sword, armor, boots, charm"));
-        Button startArea = actionButton("Farm Cave Goblin", true);
+        areaEnemyPanel.addView(adventureCard(selectedAreaPortrait(), selectedAreaEnemyName(), selectedAreaEnemyStats(), null));
+        areaEnemyPanel.addView(detailRow("Possible drops", selectedAreaDrops()));
+        Button startArea = actionButton("Start Farming", true);
         startArea.setOnClickListener(v -> startAreaFarming());
         areaEnemyPanel.addView(startArea, buttonLayoutParams());
         areaEnemyPanel.addView(backButton());
         fightPanel.addView(areaEnemyPanel);
 
         dungeonsPanel = darkCard();
-        dungeonsPanel.addView(sectionTitle("DUNGEONS"));
-        dungeonsPanel.addView(adventureCard(R.drawable.card_dungeon_goblin_cave, "Goblin Cave I", "3 encounters, Goblin Chief boss, common and uncommon gear.", v -> showFightScreen(FIGHT_DUNGEON_DETAIL)));
-        dungeonsPanel.addView(backButton());
         fightPanel.addView(dungeonsPanel);
-
-        dungeonDetailPanel = darkCard();
-        dungeonDetailPanel.addView(sectionTitle("Goblin Cave I"));
-        dungeonDetailPanel.addView(adventureCard(R.drawable.portrait_goblin_chief, "Goblin Chief", "Clear 3 encounters, defeat the boss, then walk 10 steps to open the chest.", null));
-        dungeonDetailPanel.addView(detailRow("Drops", "Common and uncommon gear"));
-        dungeonDetailPanel.addView(detailRow("Estimated clear", estimatedClearSteps() + " steps with current gear"));
-        Button startDungeon = actionButton("Start Dungeon", true);
-        startDungeon.setOnClickListener(v -> startDungeonRun());
-        dungeonDetailPanel.addView(startDungeon, buttonLayoutParams());
-        dungeonDetailPanel.addView(backButton());
-        fightPanel.addView(dungeonDetailPanel);
 
         combatHeaderPanel = darkCard();
         dungeonTitleView = text("", 22, Color.rgb(245, 224, 177), true);
@@ -460,9 +468,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         playerHp = maxPlayerHp();
         lastGameSteps = todaySteps;
         fightScreen = FIGHT_COMBAT;
-        lastReward = areaName() + " farming started. Cave Goblins will keep appearing until you retreat.";
-        setRewardMessage("Possible drops", "Farm Cave Goblins for gold and early gear.");
-        addEvent("Started farming Cave Goblins in " + areaName() + ".");
+        lastReward = areaName() + " farming started. " + enemyName() + " will keep appearing until you retreat.";
+        setRewardMessage("Possible drops", selectedAreaDrops());
+        addEvent("Started farming " + enemyName() + " in " + areaName() + ".");
         saveState();
         updateViews();
         startListeningIfReady();
@@ -543,8 +551,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return;
         }
 
-        int rawDamage = 1 + random.nextInt(enemyMaxHit());
-        int reducedDamage = Math.max(1, rawDamage * (100 - damageReductionPercent()) / 100);
+        int rawDamage = enemyMinHit() + random.nextInt(Math.max(1, enemyMaxHit() - enemyMinHit() + 1));
+        int reducedDamage = Math.max(1, rawDamage * (1000 - damageReductionTenths()) / 1000);
         playerHp = Math.max(0, playerHp - reducedDamage);
         addEvent(enemyName() + " hits for " + reducedDamage + ".");
         if (playerHp <= 0) {
@@ -571,21 +579,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void finishEnemy() {
         if (activityMode == MODE_AREA) {
-            int goldReward = 2 + random.nextInt(4) + charmLevel;
+            int goldReward = areaGoldReward();
             gold += goldReward;
-            if (random.nextInt(100) < 12) {
-                String dropSlot = randomAreaDropSlot();
-                Item foundItem = new Item(nextItemId++, dropSlot, areaDropName(dropSlot), "Common", lootLevelForSlot(dropSlot));
-                inventory.add(foundItem);
-                lastReward = "Cave Goblin dropped " + foundItem.rarity + " " + foundItem.name
-                        + "\n" + itemStatLine(foundItem)
+            ArrayList<Item> foundItems = rollAreaLoot();
+            if (!foundItems.isEmpty()) {
+                inventory.addAll(foundItems);
+                lastReward = enemyName() + " defeated.\n" + areaLootSummary(foundItems)
                         + "\nGold gained: " + goldReward;
-                setRewardItem("Last reward", foundItem, goldReward, false);
-                addEvent("Cave Goblin defeated. Found " + foundItem.name + ".");
+                setRewardItems("Last reward", foundItems, goldReward, false);
+                addEvent(enemyName() + " defeated. Found " + areaLootSummary(foundItems) + ".");
             } else {
-                lastReward = "Cave Goblin defeated.\nGold gained: " + goldReward + "\nNo item drop this time.";
-                setRewardGold("Last reward", "Cave Goblin defeated. No item drop.", goldReward);
-                addEvent("Cave Goblin defeated. Another appears.");
+                lastReward = enemyName() + " defeated.\nGold gained: " + goldReward + "\nNo item drop this time.";
+                setRewardGold("Last reward", enemyName() + " defeated. No item drop.", goldReward);
+                addEvent(enemyName() + " defeated. Another appears.");
             }
             phase = PHASE_COMBAT;
             encounterIndex = 0;
@@ -619,23 +625,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return;
         }
 
-        int roll = random.nextInt(100);
         int oldEstimate = estimatedClearSteps();
-        Item foundItem;
-        if (roll < 30) {
-            foundItem = new Item(nextItemId++, SLOT_WEAPON, "Ironwood Sword", "Uncommon", lootLevelForSlot(SLOT_WEAPON));
-        } else if (roll < 55) {
-            foundItem = new Item(nextItemId++, SLOT_BOOTS, "Trail Boots", "Uncommon", lootLevelForSlot(SLOT_BOOTS));
-        } else if (roll < 75) {
-            foundItem = new Item(nextItemId++, SLOT_ARMOR, "Padded Tunic", "Common", lootLevelForSlot(SLOT_ARMOR));
-        } else if (roll < 90) {
-            foundItem = new Item(nextItemId++, SLOT_CHARM, "Lucky Pebble", "Uncommon", lootLevelForSlot(SLOT_CHARM));
-        } else {
-            foundItem = new Item(nextItemId++, SLOT_WEAPON, "Sunlit Blade", "Rare", lootLevelForSlot(SLOT_WEAPON) + 1);
-        }
+        Item foundItem = ItemCatalog.create(nextItemId++, randomGoblinCaveChestItemKey());
 
         inventory.add(foundItem);
-        int goldReward = 18 + random.nextInt(17) + charmLevel * 2;
+        int goldReward = 18 + random.nextInt(8) + bonusGold();
         gold += goldReward;
         chestOpenedAt = System.currentTimeMillis();
         lastReward = foundItem.rarity + " - " + foundItem.name
@@ -673,6 +667,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         debugStepOffset = state.debugStepOffset;
         activeRun = state.activeRun;
         chestReady = state.chestReady;
+        showDevTools = state.showDevTools;
         phase = state.phase;
         encounterIndex = state.encounterIndex;
         travelLeft = state.travelLeft;
@@ -687,6 +682,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         chestOpenedAt = state.chestOpenedAt;
         autoChestCharge = state.autoChestCharge;
         activityMode = state.activityMode;
+        selectedArea = state.selectedArea;
+        selectedAreaEnemy = state.selectedAreaEnemy;
         mainTab = state.mainTab;
         fightScreen = state.fightScreen;
         gold = state.gold;
@@ -727,6 +724,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.debugStepOffset = debugStepOffset;
         state.activeRun = activeRun;
         state.chestReady = chestReady;
+        state.showDevTools = showDevTools;
         state.phase = phase;
         state.encounterIndex = encounterIndex;
         state.travelLeft = travelLeft;
@@ -740,6 +738,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.chestOpenedAt = chestOpenedAt;
         state.autoChestCharge = autoChestCharge;
         state.activityMode = activityMode;
+        state.selectedArea = selectedArea;
+        state.selectedAreaEnemy = selectedAreaEnemy;
         state.mainTab = mainTab;
         state.fightScreen = fightScreen;
         state.gold = gold;
@@ -788,6 +788,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         activeRun = false;
         chestReady = false;
         activityMode = MODE_NONE;
+        selectedArea = AREA_GRASSY_FIELDS;
+        selectedAreaEnemy = AREA_ENEMY_GREEN_SLIME;
         mainTab = TAB_FIGHT;
         fightScreen = FIGHT_HUB;
         phase = PHASE_TRAVEL;
@@ -814,6 +816,37 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         updateViews();
     }
 
+    private void showPreferencesDialog() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+
+        CheckBox devToolsCheckbox = new CheckBox(this);
+        devToolsCheckbox.setText("Show dev tools");
+        devToolsCheckbox.setTextSize(16);
+        devToolsCheckbox.setTextColor(Color.rgb(245, 224, 177));
+        devToolsCheckbox.setChecked(showDevTools);
+        devToolsCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            showDevTools = isChecked;
+            saveState();
+            updateViews();
+        });
+        panel.addView(devToolsCheckbox);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Preferences")
+                .setView(panel)
+                .setPositiveButton("Done", null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(245, 224, 177));
+        });
+        dialog.show();
+    }
+
     private void updateViews() {
         if (todayStepsView == null) {
             return;
@@ -837,7 +870,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         sceneView.invalidate();
 
         permissionButton.setVisibility(hasPermission || !hasSensor ? View.GONE : View.VISIBLE);
-        resetButton.setVisibility(View.VISIBLE);
+        resetButton.setVisibility(showDevTools ? View.VISIBLE : View.GONE);
+        testStepsButton.setVisibility(showDevTools ? View.VISIBLE : View.GONE);
+        testBigStepsButton.setVisibility(showDevTools ? View.VISIBLE : View.GONE);
 
         updateEquipmentView();
         updateInventoryView();
@@ -876,7 +911,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private String activityStatus() {
         if (activityMode == MODE_AREA) {
-            return "Area farming - Cave Goblin";
+            return "Area farming - " + enemyName();
         }
         if (activityMode == MODE_DUNGEON || chestReady) {
             return stageLabel() + " - " + difficultyLabel() + " - " + estimatedClearSteps() + " estimated steps";
@@ -889,6 +924,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastRewardNote = note;
         lastRewardGold = 0;
         lastRewardItem = null;
+        lastRewardItems.clear();
         lastRewardFromChest = false;
         rewardStepsRemaining = isImportantRewardMessage(title) ? 50 : 0;
     }
@@ -898,6 +934,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastRewardNote = note;
         lastRewardGold = goldReward;
         lastRewardItem = null;
+        lastRewardItems.clear();
         lastRewardFromChest = false;
         rewardStepsRemaining = 50;
     }
@@ -907,6 +944,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         lastRewardNote = "Added to bag";
         lastRewardGold = goldReward;
         lastRewardItem = item;
+        lastRewardItems.clear();
+        lastRewardItems.add(item);
+        lastRewardFromChest = fromChest;
+        rewardStepsRemaining = 50;
+    }
+
+    private void setRewardItems(String title, List<Item> items, int goldReward, boolean fromChest) {
+        lastRewardTitle = title;
+        lastRewardNote = "Added to bag";
+        lastRewardGold = goldReward;
+        lastRewardItem = items.isEmpty() ? null : items.get(0);
+        lastRewardItems.clear();
+        lastRewardItems.addAll(items);
         lastRewardFromChest = fromChest;
         rewardStepsRemaining = 50;
     }
@@ -937,8 +987,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         TextView title = text(lastRewardTitle, 18, Color.rgb(245, 224, 177), true);
         rewardContentView.addView(title);
 
-        if (lastRewardItem != null) {
-            rewardContentView.addView(rewardItemCard(lastRewardItem, lastRewardGold, lastRewardFromChest));
+        if (!lastRewardItems.isEmpty()) {
+            for (int index = 0; index < lastRewardItems.size(); index += 1) {
+                rewardContentView.addView(rewardItemCard(lastRewardItems.get(index),
+                        index == 0 ? lastRewardGold : 0,
+                        lastRewardFromChest));
+            }
             return;
         }
 
@@ -975,7 +1029,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         card.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
 
         ImageView icon = new ImageView(this);
-        icon.setImageResource(itemIcon(item.slot));
+        icon.setImageResource(itemIcon(item));
         icon.setAdjustViewBounds(true);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
         icon.setPadding(dp(4), dp(4), dp(4), dp(4));
@@ -1095,9 +1149,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
         if (!activeRun) {
             if (fightScreen == FIGHT_AREA_ENEMY) {
-                return "Farm Cave Goblins until you retreat.";
+                return "Farm " + selectedAreaEnemyName() + " until you retreat.";
             }
-            if (fightScreen == FIGHT_DUNGEON_DETAIL) {
+            if (fightScreen == FIGHT_DUNGEONS) {
                 return "3 encounters - Boss: Goblin Chief - HP combat";
             }
             return "Select an area or dungeon.";
@@ -1106,7 +1160,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "Exhausted - recover to " + resumeHp() + " HP to keep fighting";
         }
         if (activityMode == MODE_AREA) {
-            return "Farming Cave Goblins - enemy attacks every " + enemyAttackInterval() + " steps";
+            return "Farming " + enemyName() + " - enemy attacks every " + enemyAttackInterval() + " steps";
         }
         return (isBossFight() ? "Boss fight" : "Encounter " + (encounterIndex + 1) + " of " + ENCOUNTERS)
                 + " - enemy attacks every " + enemyAttackInterval() + " steps";
@@ -1196,13 +1250,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         equipmentListView.removeAllViews();
         equipmentListView.addView(equipmentRow(R.drawable.slot_weapon, "Weapon", equippedWeapon(),
-                attackDamage() + " max hit / " + attackInterval() + " steps"));
+                attackDamageLine()));
         equipmentListView.addView(equipmentRow(R.drawable.slot_armor, "Armor", equippedArmor(),
-                "+" + armorHpBonus() + " HP / " + armorReduction() + "% reduction"));
+                "+" + armorHpBonus() + " HP / " + formatPercent(armorReductionTenths()) + " reduction"));
         equipmentListView.addView(equipmentRow(R.drawable.slot_boots, "Boots", equippedBoots(),
                 "+" + bootsHpBonus() + " HP / " + dodgeChance() + "% dodge"));
         equipmentListView.addView(equipmentRow(R.drawable.slot_charm, "Charm", equippedCharm(),
-                recoveryAmount() + " recovery / " + (charmLevel * 2) + " bonus gold"));
+                itemStatLine(equippedCharm())));
     }
 
     private LinearLayout equipmentRow(int slotIconRes, String slot, Item item, String statLine) {
@@ -1245,7 +1299,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         if (item != null) {
             ImageView equippedIcon = new ImageView(this);
-            equippedIcon.setImageResource(itemIcon(item.slot));
+            equippedIcon.setImageResource(itemIcon(item));
             equippedIcon.setAdjustViewBounds(true);
             equippedIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
             equippedIcon.setPadding(dp(9), dp(9), dp(9), dp(9));
@@ -1316,7 +1370,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         tile.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
 
         ImageView icon = new ImageView(this);
-        icon.setImageResource(itemIcon(item.slot));
+        icon.setImageResource(itemIcon(item));
         icon.setAdjustViewBounds(true);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
         icon.setPadding(dp(4), dp(4), dp(4), dp(4));
@@ -1336,9 +1390,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
 
-        TextView levelView = text("Lv. " + item.level, 11, Color.rgb(226, 205, 163), false);
-        levelView.setGravity(Gravity.CENTER);
-        tile.addView(levelView);
+        TextView sellView = text("Sell " + item.sellValue + "g", 11, Color.rgb(226, 205, 163), false);
+        sellView.setGravity(Gravity.CENTER);
+        tile.addView(sellView);
 
         tile.setOnClickListener(v -> showItemDetails(item));
         return tile;
@@ -1410,6 +1464,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void showItemDetails(Item item) {
         boolean equipped = isEquipped(item);
+        boolean equippable = isEquippable(item);
         Item current = equippedForSlot(item.slot);
 
         LinearLayout panel = new LinearLayout(this);
@@ -1422,7 +1477,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         ImageView icon = new ImageView(this);
-        icon.setImageResource(itemIcon(item.slot));
+        icon.setImageResource(itemIcon(item));
         icon.setAdjustViewBounds(true);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
         icon.setPadding(dp(5), dp(5), dp(5), dp(5));
@@ -1434,15 +1489,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         titleCopy.setPadding(dp(12), 0, 0, 0);
         titleCopy.addView(text(item.rarity + " " + slotLabel(item.slot), 13, rarityColor(item.rarity), true));
         titleCopy.addView(text(item.displayName(), 19, Color.rgb(245, 224, 177), true));
-        titleCopy.addView(text(equipped ? "Currently equipped" : "In inventory", 13,
+        String location = equippable ? (equipped ? "Currently equipped" : "In inventory") : "Merchant loot";
+        titleCopy.addView(text(location, 13,
                 equipped ? Color.rgb(139, 229, 87) : Color.rgb(226, 205, 163), true));
         header.addView(titleCopy, weightedWidth(1.0f));
         panel.addView(header);
 
         addDivider(panel);
         panel.addView(ui.detailRow("Stats", itemStatLine(item)));
-        panel.addView(ui.detailRow("Equipped in this slot", current == null ? "No item equipped" : current.displayName()));
-        if (current != null && current.id != item.id) {
+        if (equippable) {
+            panel.addView(ui.detailRow("Equipped in this slot", current == null ? "No item equipped" : current.displayName()));
+        }
+        if (equippable && current != null && current.id != item.id) {
             panel.addView(ui.detailRow("Current equipped stats", itemStatLine(current)));
         }
 
@@ -1457,7 +1515,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(0, dp(52), 1.0f);
         actionParams.setMargins(dp(4), 0, dp(4), 0);
         actions.addView(closeButton, actionParams);
-        actions.addView(equipButton, new LinearLayout.LayoutParams(0, dp(52), 1.0f));
+        if (equippable) {
+            actions.addView(equipButton, new LinearLayout.LayoutParams(0, dp(52), 1.0f));
+        }
         panel.addView(actions);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
@@ -1488,20 +1548,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.addView(divider, params);
     }
 
-    private int itemIcon(String slot) {
-        if (SLOT_WEAPON.equals(slot)) {
-            return R.drawable.item_weapon;
-        }
-        if (SLOT_ARMOR.equals(slot)) {
-            return R.drawable.item_armor;
-        }
-        if (SLOT_BOOTS.equals(slot)) {
-            return R.drawable.item_boots;
-        }
-        if (SLOT_CHARM.equals(slot)) {
-            return R.drawable.item_charm;
-        }
-        return R.drawable.item_gold;
+    private int itemIcon(Item item) {
+        return item == null ? R.drawable.item_gold : item.iconRes;
     }
 
     private int rarityColor(String rarity) {
@@ -1540,7 +1588,142 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void showAreaEnemy(int area) {
         selectedArea = area;
+        selectedAreaEnemy = AREA_ENEMY_GREEN_SLIME;
+        expandedAreaLootEnemy = -1;
         showFightScreen(FIGHT_AREA_ENEMY);
+    }
+
+    private void updateAreaEnemyPanel() {
+        if (areaEnemyPanel == null || areaEnemyTitleView == null) {
+            return;
+        }
+
+        while (areaEnemyPanel.getChildCount() > 1) {
+            areaEnemyPanel.removeViewAt(1);
+        }
+
+        areaEnemyTitleView.setText(areaName());
+        if (selectedAreaIsGrassyFields()) {
+            areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_GREEN_SLIME));
+            areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_RUNAWAY_SCARECROW));
+            areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_RAGGED_BANDIT));
+        } else {
+            areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_GREEN_SLIME));
+        }
+        areaEnemyPanel.addView(backButton());
+    }
+
+    private LinearLayout enemyChoiceCard(int enemy) {
+        int previousEnemy = selectedAreaEnemy;
+        selectedAreaEnemy = enemy;
+        String enemyName = selectedAreaEnemyName();
+        String enemyStats = selectedAreaEnemyStats();
+        int portrait = selectedAreaPortrait();
+        String goldRange = selectedAreaGoldRange();
+        selectedAreaEnemy = previousEnemy;
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(8), dp(8), dp(8), dp(8));
+        card.setBackground(ui.panelBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        ImageView portraitView = new ImageView(this);
+        portraitView.setImageResource(portrait);
+        portraitView.setAdjustViewBounds(true);
+        portraitView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        portraitView.setPadding(dp(5), dp(5), dp(5), dp(5));
+        header.addView(portraitView, new LinearLayout.LayoutParams(dp(86), dp(86)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(12), 0, 0, 0);
+        copy.addView(text(enemyName, 21, Color.rgb(245, 224, 177), true));
+        TextView stats = text(enemyStats, 14, Color.rgb(226, 205, 163), false);
+        stats.setPadding(0, dp(5), 0, 0);
+        copy.addView(stats);
+        header.addView(copy, weightedWidth(1.0f));
+        card.addView(header);
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setPadding(0, dp(8), 0, 0);
+        Button fightButton = actionButton("Fight", true);
+        fightButton.setOnClickListener(v -> {
+            selectedAreaEnemy = enemy;
+            startAreaFarming();
+        });
+        buttons.addView(fightButton, weightedWidth(1.0f));
+
+        Button lootButton = actionButton(expandedAreaLootEnemy == enemy ? "Hide Loot" : "Show Loot", false);
+        lootButton.setOnClickListener(v -> {
+            expandedAreaLootEnemy = expandedAreaLootEnemy == enemy ? -1 : enemy;
+            updateAreaEnemyPanel();
+        });
+        buttons.addView(lootButton, weightedWidth(1.0f));
+        card.addView(buttons);
+
+        if (expandedAreaLootEnemy == enemy) {
+            card.addView(enemyLootPreview(enemy, goldRange));
+        }
+
+        card.setLayoutParams(buttonLayoutParams());
+        return card;
+    }
+
+    private LinearLayout enemyLootPreview(int enemy, String goldRange) {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(10), dp(9), dp(10), dp(9));
+        panel.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(80, 58, 35)));
+        panel.addView(text("Possible loot", 14, Color.rgb(245, 224, 177), true));
+
+        panel.addView(lootPreviewRow(R.drawable.item_gold, "Gold: " + goldRange, "Currency"));
+        for (String itemKey : selectedAreaLootKeys(enemy)) {
+            Item item = ItemCatalog.create(0, itemKey);
+            if (item != null) {
+                panel.addView(lootPreviewRow(item));
+            }
+        }
+
+        LinearLayout.LayoutParams params = buttonLayoutParams();
+        params.setMargins(0, dp(8), 0, 0);
+        panel.setLayoutParams(params);
+        return panel;
+    }
+
+    private LinearLayout lootPreviewRow(int iconRes, String name, String detail) {
+        return lootPreviewRow(iconRes, name, detail, Color.rgb(192, 125, 44));
+    }
+
+    private LinearLayout lootPreviewRow(Item item) {
+        return lootPreviewRow(item.iconRes, item.name, item.rarity + " " + slotLabel(item.slot), rarityColor(item.rarity));
+    }
+
+    private LinearLayout lootPreviewRow(int iconRes, String name, String detail, int borderColor) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(7), 0, 0);
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), borderColor));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(42), dp(42)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(10), 0, 0, 0);
+        copy.addView(text(name, 15, Color.rgb(226, 205, 163), true));
+        copy.addView(text(detail, 12, Color.rgb(192, 157, 100), false));
+        row.addView(copy, weightedWidth(1.0f));
+        return row;
     }
 
     private void updateMainScreens() {
@@ -1555,6 +1738,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (areaEnemyTitleView != null) {
             areaEnemyTitleView.setText(areaName());
         }
+        if (fightScreen == FIGHT_AREA_ENEMY) {
+            updateAreaEnemyPanel();
+        }
+        if (fightScreen == FIGHT_DUNGEON_DETAIL) {
+            fightScreen = FIGHT_DUNGEONS;
+        }
+        if (fightScreen == FIGHT_DUNGEONS) {
+            updateDungeonsPanel();
+        }
 
         fightPanel.setVisibility(mainTab == TAB_FIGHT ? View.VISIBLE : View.GONE);
         skillsPanel.setVisibility(mainTab == TAB_SKILLS ? View.VISIBLE : View.GONE);
@@ -1566,7 +1758,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         areasPanel.setVisibility(fightScreen == FIGHT_AREAS ? View.VISIBLE : View.GONE);
         areaEnemyPanel.setVisibility(fightScreen == FIGHT_AREA_ENEMY ? View.VISIBLE : View.GONE);
         dungeonsPanel.setVisibility(fightScreen == FIGHT_DUNGEONS ? View.VISIBLE : View.GONE);
-        dungeonDetailPanel.setVisibility(fightScreen == FIGHT_DUNGEON_DETAIL ? View.VISIBLE : View.GONE);
         combatHeaderPanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
         scenePanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
         actionPanel.setVisibility(showCombat ? View.VISIBLE : View.GONE);
@@ -1576,6 +1767,86 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         styleTabButton(skillsNavButton, mainTab == TAB_SKILLS);
         styleTabButton(bagNavButton, mainTab == TAB_BAG);
         styleTabButton(townNavButton, mainTab == TAB_TOWN);
+    }
+
+    private void updateDungeonsPanel() {
+        if (dungeonsPanel == null) {
+            return;
+        }
+
+        dungeonsPanel.removeAllViews();
+        dungeonsPanel.addView(sectionTitle("DUNGEONS"));
+        dungeonsPanel.addView(adventureCard(R.drawable.title_goblin_cave, "Goblin Cave I",
+                "Goblin Chief boss, chest rewards.", null));
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        Button startDungeon = actionButton("Start Dungeon", true);
+        startDungeon.setOnClickListener(v -> startDungeonRun());
+        buttons.addView(startDungeon, weightedWidth(1.0f));
+
+        Button lootButton = actionButton(dungeonLootVisible ? "Hide Info" : "Show Info", false);
+        lootButton.setOnClickListener(v -> {
+            dungeonLootVisible = !dungeonLootVisible;
+            updateDungeonsPanel();
+        });
+        buttons.addView(lootButton, weightedWidth(1.0f));
+        dungeonsPanel.addView(buttons, buttonLayoutParams());
+
+        if (dungeonLootVisible) {
+            dungeonsPanel.addView(dungeonInfoPreview());
+        }
+        dungeonsPanel.addView(backButton());
+    }
+
+    private LinearLayout dungeonInfoPreview() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(10), dp(9), dp(10), dp(9));
+        panel.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(80, 58, 35)));
+        panel.addView(text("Dungeon info", 14, Color.rgb(245, 224, 177), true));
+        panel.addView(detailRow("Enemies", "3 Goblins | Boss: Goblin Chief"));
+        panel.addView(detailRow("Estimated steps", estimatedClearSteps() + " with current gear"));
+        panel.addView(detailRow("Chest", "Opens automatically 10 steps after the boss"));
+        panel.addView(text("Possible chest rewards", 14, Color.rgb(245, 224, 177), true));
+        panel.addView(lootPreviewRow(R.drawable.item_gold, "Gold: 18-25", "Currency"));
+        for (String key : dungeonChestLootKeys()) {
+            Item item = ItemCatalog.create(0, key);
+            if (item != null) {
+                panel.addView(lootPreviewRow(item));
+            }
+        }
+        LinearLayout.LayoutParams params = buttonLayoutParams();
+        params.setMargins(0, 0, 0, dp(10));
+        panel.setLayoutParams(params);
+        return panel;
+    }
+
+    private List<String> dungeonChestLootKeys() {
+        ArrayList<String> keys = new ArrayList<>();
+        keys.add(ItemCatalog.IRON_SWORD);
+        keys.add(ItemCatalog.CHIPPED_GOBLIN_AXE);
+        keys.add(ItemCatalog.GOBLIN_TOOTH_CHARM);
+        keys.add(ItemCatalog.GOBLIN_SCOUT_BOOTS);
+        keys.add(ItemCatalog.DEEP_CAVE_ARMOR);
+        return keys;
+    }
+
+    private String randomGoblinCaveChestItemKey() {
+        int roll = random.nextInt(5);
+        if (roll == 0) {
+            return ItemCatalog.IRON_SWORD;
+        }
+        if (roll == 1) {
+            return ItemCatalog.CHIPPED_GOBLIN_AXE;
+        }
+        if (roll == 2) {
+            return ItemCatalog.GOBLIN_TOOTH_CHARM;
+        }
+        if (roll == 3) {
+            return ItemCatalog.GOBLIN_SCOUT_BOOTS;
+        }
+        return ItemCatalog.DEEP_CAVE_ARMOR;
     }
 
     private void stopActivity() {
@@ -1594,18 +1865,44 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private String itemStatLine(Item item) {
+        if (item == null) {
+            return "No item equipped";
+        }
         if (SLOT_WEAPON.equals(item.slot)) {
-            int damage = 10 + item.level * 6;
-            int interval = Math.max(35, 70 - item.level * 4);
-            return "Max hit " + damage + " / " + interval + " steps";
+            return "+" + item.minDamage + "-" + item.maxDamage + " damage / " + item.attackSteps + " steps";
         }
         if (SLOT_ARMOR.equals(item.slot)) {
-            return "+" + (item.level * 12) + " HP, " + (item.level * 3) + "% reduction";
+            return "+" + item.hpBonus + " HP" + optionalPercent(item.damageReduction, " reduction");
         }
         if (SLOT_BOOTS.equals(item.slot)) {
-            return "+" + (item.level * 6) + " HP, " + Math.min(25, item.level * 3) + "% dodge";
+            String line = "+" + item.hpBonus + " HP";
+            if (item.dodge > 0) {
+                line += ", +" + item.dodge + "% dodge";
+            }
+            return line + optionalPercent(item.damageReduction, " reduction");
         }
-        return (4 + item.level * 2) + " recovery, " + (item.level * 2) + " bonus gold";
+        if (SLOT_LOOT.equals(item.slot)) {
+            return "Sell to merchant for " + item.sellValue + "g";
+        }
+        String line = item.damageBonus > 0 ? "+" + item.damageBonus + " damage" : "";
+        if (item.recoveryBonus > 0) {
+            line += (line.isEmpty() ? "" : ", ") + "+" + item.recoveryBonus + " recovery";
+        }
+        if (item.bonusGold > 0) {
+            line += (line.isEmpty() ? "" : ", ") + "+" + item.bonusGold + " bonus gold";
+        }
+        return line.isEmpty() ? "No stat bonus" : line;
+    }
+
+    private String optionalPercent(int value, String label) {
+        return value <= 0 ? "" : ", " + formatPercent(value) + label;
+    }
+
+    private String formatPercent(int tenths) {
+        if (tenths % 10 == 0) {
+            return (tenths / 10) + "%";
+        }
+        return (tenths / 10) + "." + Math.abs(tenths % 10) + "%";
     }
 
     private String slotLabel(String slot) {
@@ -1617,6 +1914,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
         if (SLOT_BOOTS.equals(slot)) {
             return "Boots";
+        }
+        if (SLOT_LOOT.equals(slot)) {
+            return "Loot";
         }
         return "Charm";
     }
@@ -1630,7 +1930,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void equipItem(int itemId) {
         Item item = findItem(itemId);
-        if (item == null) {
+        if (item == null || !isEquippable(item)) {
             return;
         }
 
@@ -1689,6 +1989,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 || item.id == equippedCharmId;
     }
 
+    private boolean isEquippable(Item item) {
+        return item != null && !SLOT_LOOT.equals(item.slot);
+    }
+
     private Item equippedWeapon() {
         return findItem(equippedWeaponId);
     }
@@ -1724,32 +2028,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void updateEquippedStats() {
-        Item weapon = equippedWeapon();
-        Item armor = equippedArmor();
-        Item boots = equippedBoots();
-        Item charm = equippedCharm();
-        weaponLevel = weapon == null ? 0 : weapon.level;
-        armorLevel = armor == null ? 0 : armor.level;
-        bootsLevel = boots == null ? 0 : boots.level;
-        charmLevel = charm == null ? 0 : charm.level;
-    }
-
-    private int lootLevelForSlot(String slot) {
-        int current;
-        if (SLOT_WEAPON.equals(slot)) {
-            Item item = equippedWeapon();
-            current = item == null ? 0 : item.level;
-        } else if (SLOT_ARMOR.equals(slot)) {
-            Item item = equippedArmor();
-            current = item == null ? 0 : item.level;
-        } else if (SLOT_BOOTS.equals(slot)) {
-            Item item = equippedBoots();
-            current = item == null ? 0 : item.level;
-        } else {
-            Item item = equippedCharm();
-            current = item == null ? 0 : item.level;
-        }
-        return current + 1 + (random.nextInt(100) < 18 ? 1 : 0);
+        weaponLevel = equippedWeapon() == null ? 0 : 1;
+        armorLevel = equippedArmor() == null ? 0 : 1;
+        bootsLevel = equippedBoots() == null ? 0 : 1;
+        charmLevel = equippedCharm() == null ? 0 : 1;
     }
 
     private Item findItem(int id) {
@@ -1762,28 +2044,26 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void normalizeLegacyStarterItems() {
-        replaceStarterItem(1, SLOT_WEAPON, "Novice Sword");
-        replaceStarterItem(2, SLOT_ARMOR, "Novice Tunic");
-        replaceStarterItem(3, SLOT_BOOTS, "Novice Boots");
-        replaceStarterItem(4, SLOT_CHARM, "Novice Charm");
-    }
-
-    private void replaceStarterItem(int id, String slot, String name) {
-        for (int index = 0; index < inventory.size(); index += 1) {
-            Item item = inventory.get(index);
-            if (item.id == id && slot.equals(item.slot) && !name.equals(item.name)) {
-                inventory.set(index, new Item(item.id, item.slot, name, item.rarity, item.level));
-                return;
-            }
+        if (findItem(1) == null) {
+            inventory.add(ItemCatalog.create(1, ItemCatalog.NOVICE_SWORD));
+        }
+        if (findItem(2) == null) {
+            inventory.add(ItemCatalog.create(2, ItemCatalog.NOVICE_TUNIC));
+        }
+        if (findItem(3) == null) {
+            inventory.add(ItemCatalog.create(3, ItemCatalog.NOVICE_BOOTS));
+        }
+        if (findItem(4) == null) {
+            inventory.add(ItemCatalog.create(4, ItemCatalog.NOVICE_CHARM));
         }
     }
 
     private void createStarterInventory(int weapon, int armor, int boots, int charm) {
         inventory.clear();
-        inventory.add(new Item(1, SLOT_WEAPON, "Novice Sword", "Common", Math.max(1, weapon)));
-        inventory.add(new Item(2, SLOT_ARMOR, "Novice Tunic", "Common", Math.max(1, armor)));
-        inventory.add(new Item(3, SLOT_BOOTS, "Novice Boots", "Common", Math.max(1, boots)));
-        inventory.add(new Item(4, SLOT_CHARM, "Novice Charm", "Common", Math.max(1, charm)));
+        inventory.add(ItemCatalog.create(1, ItemCatalog.NOVICE_SWORD));
+        inventory.add(ItemCatalog.create(2, ItemCatalog.NOVICE_TUNIC));
+        inventory.add(ItemCatalog.create(3, ItemCatalog.NOVICE_BOOTS));
+        inventory.add(ItemCatalog.create(4, ItemCatalog.NOVICE_CHARM));
         equippedWeaponId = 1;
         equippedArmorId = 2;
         equippedBootsId = 3;
@@ -1842,55 +2122,350 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int attackInterval() {
-        return CombatSystem.attackInterval(weaponLevel);
+        Item weapon = equippedWeapon();
+        return weapon == null ? CombatSystem.BASE_ATTACK_INTERVAL : weapon.attackSteps;
     }
 
     private int attackDamage() {
-        return CombatSystem.attackDamage(weaponLevel);
+        return attackMaxDamage();
     }
 
-    private int armorReduction() {
-        return CombatSystem.armorReduction(armorLevel, bootsLevel);
+    private int armorReductionTenths() {
+        return Math.min(450, armorReductionBonus());
     }
 
     private int enemyMaxHp(boolean boss) {
+        if (currentEnemyIsGreenSlime() && !boss) {
+            return CombatSystem.greenSlimeMaxHp();
+        }
+        if (currentEnemyIsRunawayScarecrow() && !boss) {
+            return CombatSystem.runawayScarecrowMaxHp();
+        }
+        if (currentEnemyIsRaggedBandit() && !boss) {
+            return CombatSystem.raggedBanditMaxHp();
+        }
         return CombatSystem.enemyMaxHp(boss);
     }
 
     private String enemyName() {
+        if (currentEnemyIsGreenSlime()) {
+            return CombatSystem.greenSlimeName();
+        }
+        if (currentEnemyIsRunawayScarecrow()) {
+            return CombatSystem.runawayScarecrowName();
+        }
+        if (currentEnemyIsRaggedBandit()) {
+            return CombatSystem.raggedBanditName();
+        }
         return CombatSystem.enemyName(isBossFight());
     }
 
     private int enemyMaxHit() {
+        if (currentEnemyIsGreenSlime()) {
+            return CombatSystem.greenSlimeMaxHit();
+        }
+        if (currentEnemyIsRunawayScarecrow()) {
+            return CombatSystem.runawayScarecrowMaxHit();
+        }
+        if (currentEnemyIsRaggedBandit()) {
+            return CombatSystem.raggedBanditMaxHit();
+        }
         return CombatSystem.enemyMaxHit(isBossFight());
     }
 
+    private int enemyMinHit() {
+        if (currentEnemyIsRunawayScarecrow()) {
+            return 7;
+        }
+        if (currentEnemyIsRaggedBandit()) {
+            return 4;
+        }
+        return 1;
+    }
+
     private int enemyAttackInterval() {
+        if (currentEnemyIsGreenSlime()) {
+            return CombatSystem.greenSlimeAttackInterval();
+        }
+        if (currentEnemyIsRunawayScarecrow()) {
+            return CombatSystem.runawayScarecrowAttackInterval();
+        }
+        if (currentEnemyIsRaggedBandit()) {
+            return CombatSystem.raggedBanditAttackInterval();
+        }
         return CombatSystem.enemyAttackInterval(isBossFight());
     }
 
+    private boolean currentEnemyIsGreenSlime() {
+        return activityMode == MODE_AREA
+                && selectedArea == AREA_GRASSY_FIELDS
+                && selectedAreaEnemy == AREA_ENEMY_GREEN_SLIME
+                && !isBossFight();
+    }
+
+    private boolean currentEnemyIsRunawayScarecrow() {
+        return activityMode == MODE_AREA
+                && selectedArea == AREA_GRASSY_FIELDS
+                && selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW
+                && !isBossFight();
+    }
+
+    private boolean currentEnemyIsRaggedBandit() {
+        return activityMode == MODE_AREA
+                && selectedArea == AREA_GRASSY_FIELDS
+                && selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT
+                && !isBossFight();
+    }
+
+    private boolean selectedAreaIsGrassyFields() {
+        return selectedArea == AREA_GRASSY_FIELDS;
+    }
+
+    private String selectedAreaEnemyName() {
+        if (!selectedAreaIsGrassyFields()) {
+            return "Cave Goblin";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return CombatSystem.raggedBanditName();
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return CombatSystem.runawayScarecrowName();
+        }
+        return CombatSystem.greenSlimeName();
+    }
+
+    private String selectedAreaEnemyStats() {
+        if (!selectedAreaIsGrassyFields()) {
+            return "HP 75 | Max Hit 10 | Attack 115 steps";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return "HP 80 | Damage 7-9 | Attack 110 steps | Gold 2-5";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return "HP 100 | Damage 4-6 | Attack 55 steps | Gold 4-8";
+        }
+        return "HP 40 | Damage 1-6 | Attack 100 steps | Gold 1-3";
+    }
+
+    private int selectedAreaPortrait() {
+        if (!selectedAreaIsGrassyFields()) {
+            return R.drawable.portrait_cave_goblin;
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return R.drawable.ragged_bandit_enemy_portrait;
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return R.drawable.runaway_scarecrow_enemy_portrait;
+        }
+        return R.drawable.green_slime_enemy_portrait;
+    }
+
+    private String selectedAreaDrops() {
+        return selectedAreaIsGrassyFields() ? "Gold only for now" : "Gold only";
+    }
+
+    private String selectedAreaGoldRange() {
+        if (!selectedAreaIsGrassyFields()) {
+            return (2 + bonusGold()) + "-" + (5 + bonusGold());
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return "4-8";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return "2-5";
+        }
+        return "1-3";
+    }
+
+    private List<String> selectedAreaLootKeys(int enemy) {
+        ArrayList<String> keys = new ArrayList<>();
+        if (!selectedAreaIsGrassyFields()) {
+            return keys;
+        }
+        if (enemy == AREA_ENEMY_RAGGED_BANDIT) {
+            keys.add(ItemCatalog.STOLEN_TRINKET);
+            keys.add(ItemCatalog.BRONZE_ARMOR);
+            keys.add(ItemCatalog.IRON_ARMOR);
+            keys.add(ItemCatalog.IRON_CHARM);
+            return keys;
+        }
+        if (enemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            keys.add(ItemCatalog.NAILS);
+            keys.add(ItemCatalog.BRONZE_SWORD);
+            keys.add(ItemCatalog.IRON_BOOTS);
+            keys.add(ItemCatalog.IRON_SWORD);
+            return keys;
+        }
+        keys.add(ItemCatalog.GREEN_GOO);
+        keys.add(ItemCatalog.BRONZE_BOOTS);
+        keys.add(ItemCatalog.BRONZE_CHARM);
+        keys.add(ItemCatalog.IRON_CHARM);
+        return keys;
+    }
+
+    private int areaGoldReward() {
+        if (selectedAreaIsGrassyFields() && selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return 2 + random.nextInt(4);
+        }
+        if (selectedAreaIsGrassyFields() && selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return 4 + random.nextInt(5);
+        }
+        if (selectedAreaIsGrassyFields()) {
+            return 1 + random.nextInt(3);
+        }
+        return 2 + random.nextInt(4) + bonusGold();
+    }
+
+    private ArrayList<Item> rollAreaLoot() {
+        ArrayList<Item> drops = new ArrayList<>();
+        if (!selectedAreaIsGrassyFields()) {
+            return drops;
+        }
+
+        String sellDropKey = null;
+        String equipmentDropKey = null;
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            if (random.nextInt(100) < 60) {
+                sellDropKey = ItemCatalog.STOLEN_TRINKET;
+            }
+            int roll = random.nextInt(100);
+            if (roll < 20) {
+                equipmentDropKey = ItemCatalog.BRONZE_ARMOR;
+            } else if (roll < 27) {
+                equipmentDropKey = ItemCatalog.IRON_ARMOR;
+            } else if (roll < 32) {
+                equipmentDropKey = ItemCatalog.IRON_CHARM;
+            }
+        } else if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            if (random.nextInt(100) < 60) {
+                sellDropKey = ItemCatalog.NAILS;
+            }
+            int roll = random.nextInt(100);
+            if (roll < 14) {
+                equipmentDropKey = ItemCatalog.BRONZE_SWORD;
+            } else if (roll < 24) {
+                equipmentDropKey = ItemCatalog.IRON_BOOTS;
+            } else if (roll < 29) {
+                equipmentDropKey = ItemCatalog.IRON_SWORD;
+            }
+        } else {
+            if (random.nextInt(100) < 60) {
+                sellDropKey = ItemCatalog.GREEN_GOO;
+            }
+            int roll = random.nextInt(100);
+            if (roll < 15) {
+                equipmentDropKey = ItemCatalog.BRONZE_BOOTS;
+            } else if (roll < 25) {
+                equipmentDropKey = ItemCatalog.BRONZE_CHARM;
+            } else if (roll < 32) {
+                equipmentDropKey = ItemCatalog.IRON_CHARM;
+            }
+        }
+
+        if (sellDropKey != null) {
+            drops.add(ItemCatalog.create(nextItemId++, sellDropKey));
+        }
+        if (equipmentDropKey != null) {
+            drops.add(ItemCatalog.create(nextItemId++, equipmentDropKey));
+        }
+        return drops;
+    }
+
+    private String areaLootSummary(List<Item> items) {
+        StringBuilder builder = new StringBuilder();
+        for (Item item : items) {
+            if (item == null) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(", ");
+            }
+            builder.append(item.name);
+        }
+        return builder.length() == 0 ? "no item drop" : builder.toString();
+    }
+
+    private String attackDamageLine() {
+        return attackMinDamage() + "-" + attackMaxDamage() + " damage / " + attackInterval() + " steps";
+    }
+
+    private int attackMinDamage() {
+        Item weapon = equippedWeapon();
+        return CombatSystem.BASE_UNARMED_MIN_DAMAGE + (weapon == null ? 0 : weapon.minDamage) + damageBonus();
+    }
+
+    private int attackMaxDamage() {
+        Item weapon = equippedWeapon();
+        return CombatSystem.BASE_UNARMED_MAX_DAMAGE + (weapon == null ? 0 : weapon.maxDamage) + damageBonus();
+    }
+
+    private int damageBonus() {
+        Item charm = equippedCharm();
+        return charm == null ? 0 : charm.damageBonus;
+    }
+
+    private int armorReductionBonus() {
+        int total = 0;
+        Item armor = equippedArmor();
+        Item boots = equippedBoots();
+        if (armor != null) {
+            total += armor.damageReduction;
+        }
+        if (boots != null) {
+            total += boots.damageReduction;
+        }
+        return total;
+    }
+
+    private int dodgeBonus() {
+        int total = 0;
+        Item boots = equippedBoots();
+        Item charm = equippedCharm();
+        if (boots != null) {
+            total += boots.dodge;
+        }
+        if (charm != null) {
+            total += charm.dodge;
+        }
+        return total;
+    }
+
+    private int recoveryBonus() {
+        Item charm = equippedCharm();
+        return charm == null ? 0 : charm.recoveryBonus;
+    }
+
+    private int bonusGold() {
+        Item charm = equippedCharm();
+        return charm == null ? 0 : charm.bonusGold;
+    }
+
     private int maxPlayerHp() {
-        return CombatSystem.maxPlayerHp(armorLevel, bootsLevel);
+        return CombatSystem.BASE_PLAYER_HP + armorHpBonus() + bootsHpBonus();
     }
 
     private int armorHpBonus() {
-        return CombatSystem.armorHpBonus(armorLevel);
+        Item armor = equippedArmor();
+        return armor == null ? 0 : armor.hpBonus;
     }
 
     private int bootsHpBonus() {
-        return CombatSystem.bootsHpBonus(bootsLevel);
+        Item boots = equippedBoots();
+        return boots == null ? 0 : boots.hpBonus;
     }
 
     private int dodgeChance() {
-        return CombatSystem.dodgeChance(bootsLevel, charmLevel);
+        return Math.min(35, dodgeBonus());
     }
 
-    private int damageReductionPercent() {
-        return armorReduction();
+    private int damageReductionTenths() {
+        return armorReductionTenths();
     }
 
     private int playerHitDamage() {
-        return 1 + random.nextInt(attackDamage());
+        int min = attackMinDamage();
+        int max = attackMaxDamage();
+        return min + random.nextInt(Math.max(1, max - min + 1));
     }
 
     private int recoveryStepCost() {
@@ -1898,7 +2473,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int recoveryAmount() {
-        return CombatSystem.recoveryAmount(charmLevel);
+        return CombatSystem.BASE_RECOVERY_AMOUNT + recoveryBonus();
     }
 
     private int resumeHp() {
@@ -1910,7 +2485,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int estimatedClearSteps() {
-        return CombatSystem.estimatedClearSteps(weaponLevel);
+        return CombatSystem.estimatedClearSteps(attackInterval(), Math.max(1, (attackMinDamage() + attackMaxDamage()) / 2));
     }
 
     private String difficultyLabel() {
@@ -1922,14 +2497,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "Challenging";
         }
         return "Long";
-    }
-
-    private String randomAreaDropSlot() {
-        return LootSystem.randomAreaDropSlot(random);
-    }
-
-    private String areaDropName(String slot) {
-        return LootSystem.areaDropName(slot);
     }
 
     private boolean hasStepPermission() {
@@ -2071,6 +2638,21 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     @Override
     public String sceneEnemyName() {
         return enemyName();
+    }
+
+    @Override
+    public boolean sceneEnemyIsGreenSlime() {
+        return currentEnemyIsGreenSlime();
+    }
+
+    @Override
+    public boolean sceneEnemyIsRunawayScarecrow() {
+        return currentEnemyIsRunawayScarecrow();
+    }
+
+    @Override
+    public boolean sceneEnemyIsRaggedBandit() {
+        return currentEnemyIsRaggedBandit();
     }
 
     @Override
