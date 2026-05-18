@@ -14,6 +14,13 @@ final class SaveStore {
     private static final String BASELINE_KEY = "baseline";
     private static final String TODAY_STEPS_KEY = "today_steps";
     private static final String DEBUG_STEP_OFFSET_KEY = "debug_step_offset";
+    private static final String LAST_SENSOR_STEPS_KEY = "last_sensor_steps";
+    private static final String TODAY_GOLD_EARNED_KEY = "today_gold_earned";
+    private static final String TODAY_ENEMIES_DEFEATED_KEY = "today_enemies_defeated";
+    private static final String TODAY_CHESTS_OPENED_KEY = "today_chests_opened";
+    private static final String DAILY_REWARD_MASK_KEY = "daily_reward_mask";
+    private static final String ACTIVITY_TAB_KEY = "activity_tab";
+    private static final String DAILY_HISTORY_KEY = "daily_history";
     private static final String ACTIVE_KEY = "active_run";
     private static final String SHOW_DEV_TOOLS_KEY = "show_dev_tools";
     private static final String PHASE_KEY = "phase";
@@ -61,15 +68,18 @@ final class SaveStore {
             state.baseline = -1;
             state.todaySteps = 0;
             state.debugStepOffset = 0;
+            state.lastSensorSteps = -1;
         } else {
             state.baseline = prefs.getInt(BASELINE_KEY, -1);
             state.todaySteps = prefs.getInt(TODAY_STEPS_KEY, 0);
             state.debugStepOffset = prefs.getInt(DEBUG_STEP_OFFSET_KEY, 0);
+            state.lastSensorSteps = prefs.getInt(LAST_SENSOR_STEPS_KEY, -1);
         }
 
         state.activeRun = prefs.getBoolean(ACTIVE_KEY, false);
         state.chestReady = prefs.getBoolean(CHEST_READY_KEY, false);
         state.showDevTools = prefs.getBoolean(SHOW_DEV_TOOLS_KEY, false);
+        state.activityTab = prefs.getInt(ACTIVITY_TAB_KEY, 0);
         state.phase = prefs.getInt(PHASE_KEY, 0);
         state.encounterIndex = prefs.getInt(ENCOUNTER_KEY, 0);
         state.travelLeft = prefs.getInt(TRAVEL_LEFT_KEY, 0);
@@ -97,6 +107,19 @@ final class SaveStore {
         state.equippedArmorId = prefs.getInt(EQUIPPED_ARMOR_KEY, 2);
         state.equippedBootsId = prefs.getInt(EQUIPPED_BOOTS_KEY, 3);
         state.equippedCharmId = prefs.getInt(EQUIPPED_CHARM_KEY, 4);
+        parseDailyHistory(prefs.getString(DAILY_HISTORY_KEY, ""), state);
+        DailyStats todayStats = findDailyStats(state, todayKey);
+        if (todayStats != null) {
+            state.todayGoldEarned = todayStats.goldEarned;
+            state.todayEnemiesDefeated = todayStats.enemiesDefeated;
+            state.todayChestsOpened = todayStats.chestsOpened;
+            state.dailyRewardMask = todayStats.rewardMask;
+        } else if (todayKey.equals(storedDate)) {
+            state.todayGoldEarned = prefs.getInt(TODAY_GOLD_EARNED_KEY, 0);
+            state.todayEnemiesDefeated = prefs.getInt(TODAY_ENEMIES_DEFEATED_KEY, 0);
+            state.todayChestsOpened = prefs.getInt(TODAY_CHESTS_OPENED_KEY, 0);
+            state.dailyRewardMask = prefs.getInt(DAILY_REWARD_MASK_KEY, 0);
+        }
         parseInventory(prefs.getString(INVENTORY_KEY, ""), state);
         return state;
     }
@@ -107,6 +130,12 @@ final class SaveStore {
                 .putInt(BASELINE_KEY, state.baseline)
                 .putInt(TODAY_STEPS_KEY, state.todaySteps)
                 .putInt(DEBUG_STEP_OFFSET_KEY, state.debugStepOffset)
+                .putInt(LAST_SENSOR_STEPS_KEY, state.lastSensorSteps)
+                .putInt(TODAY_GOLD_EARNED_KEY, state.todayGoldEarned)
+                .putInt(TODAY_ENEMIES_DEFEATED_KEY, state.todayEnemiesDefeated)
+                .putInt(TODAY_CHESTS_OPENED_KEY, state.todayChestsOpened)
+                .putInt(DAILY_REWARD_MASK_KEY, state.dailyRewardMask)
+                .putInt(ACTIVITY_TAB_KEY, state.activityTab)
                 .putBoolean(ACTIVE_KEY, state.activeRun)
                 .putBoolean(CHEST_READY_KEY, state.chestReady)
                 .putBoolean(SHOW_DEV_TOOLS_KEY, state.showDevTools)
@@ -138,6 +167,7 @@ final class SaveStore {
                 .putInt(EQUIPPED_BOOTS_KEY, state.equippedBootsId)
                 .putInt(EQUIPPED_CHARM_KEY, state.equippedCharmId)
                 .putString(INVENTORY_KEY, serializeInventory(state))
+                .putString(DAILY_HISTORY_KEY, serializeDailyHistory(state))
                 .apply();
     }
 
@@ -162,6 +192,40 @@ final class SaveStore {
                 builder.append(';');
             }
             builder.append(item.toStorage());
+        }
+        return builder.toString();
+    }
+
+    private void parseDailyHistory(String value, GameState state) {
+        if (value == null || value.trim().isEmpty()) {
+            return;
+        }
+
+        String[] days = value.split(";");
+        for (String dayValue : days) {
+            DailyStats stats = DailyStats.fromStorage(dayValue);
+            if (stats != null) {
+                state.dailyHistory.add(stats);
+            }
+        }
+    }
+
+    private DailyStats findDailyStats(GameState state, String dateKey) {
+        for (DailyStats stats : state.dailyHistory) {
+            if (dateKey.equals(stats.dateKey)) {
+                return stats;
+            }
+        }
+        return null;
+    }
+
+    private String serializeDailyHistory(GameState state) {
+        StringBuilder builder = new StringBuilder();
+        for (DailyStats stats : state.dailyHistory) {
+            if (builder.length() > 0) {
+                builder.append(';');
+            }
+            builder.append(stats.toStorage());
         }
         return builder.toString();
     }

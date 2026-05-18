@@ -7,6 +7,12 @@ final class GameState {
     int baseline = -1;
     int todaySteps = 0;
     int debugStepOffset = 0;
+    int lastSensorSteps = -1;
+    int todayGoldEarned = 0;
+    int todayEnemiesDefeated = 0;
+    int todayChestsOpened = 0;
+    int dailyRewardMask = 0;
+    int activityTab = 0;
 
     boolean activeRun = false;
     boolean chestReady = false;
@@ -39,4 +45,5 @@ final class GameState {
     String lastReward = "";
     String eventLog = "";
     final ArrayList<Item> inventory = new ArrayList<>();
+    final ArrayList<DailyStats> dailyHistory = new ArrayList<>();
 }

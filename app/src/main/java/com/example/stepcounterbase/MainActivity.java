@@ -25,6 +25,7 @@ import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -39,6 +40,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private static final int AREA_ENEMY_GREEN_SLIME = 0;
     private static final int AREA_ENEMY_RUNAWAY_SCARECROW = 1;
     private static final int AREA_ENEMY_RAGGED_BANDIT = 2;
+    private static final int TOWN_HOME = 0;
+    private static final int TOWN_MERCHANT = 1;
+    private static final int TOWN_ACTIVITY = 2;
+    private static final int ACTIVITY_TODAY = 0;
+    private static final int ACTIVITY_WEEK = 1;
+    private static final int ACTIVITY_MONTH = 2;
+    private static final int DAILY_REWARD_3000 = 1;
+    private static final int DAILY_REWARD_6000 = 2;
+    private static final int DAILY_REWARD_10000 = 4;
     private final Random random = new Random();
 
     private SensorManager sensorManager;
@@ -104,10 +114,17 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Button combatLogToggleButton;
     private boolean dungeonLootVisible = false;
     private boolean showDevTools = false;
+    private int townScreen = TOWN_HOME;
 
     private int baseline = -1;
     private int todaySteps = 0;
     private int debugStepOffset = 0;
+    private int lastSensorSteps = -1;
+    private int todayGoldEarned = 0;
+    private int todayEnemiesDefeated = 0;
+    private int todayChestsOpened = 0;
+    private int dailyRewardMask = 0;
+    private int activityTab = ACTIVITY_TODAY;
     private String todayKey;
 
     private boolean activeRun = false;
@@ -150,6 +167,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private String eventLog = "Ready at the cave mouth.";
     private boolean combatLogVisible = true;
     private final ArrayList<Item> inventory = new ArrayList<>();
+    private final ArrayList<DailyStats> dailyHistory = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -176,6 +194,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     @Override
     protected void onPause() {
         super.onPause();
+        saveState();
         if (sensorManager != null) {
             sensorManager.unregisterListener(this);
         }
@@ -187,9 +206,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return;
         }
 
+        int totalSinceBoot = Math.round(event.values[0]);
+        syncStepCounter(totalSinceBoot);
+    }
+
+    private void syncStepCounter(int totalSinceBoot) {
         ensureCurrentDay();
 
-        int totalSinceBoot = Math.round(event.values[0]);
         if (baseline < 0 || totalSinceBoot < baseline) {
             baseline = totalSinceBoot;
         }
@@ -197,6 +220,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         int newTodaySteps = Math.max(0, totalSinceBoot - baseline + debugStepOffset);
         int delta = Math.max(0, newTodaySteps - todaySteps);
         todaySteps = newTodaySteps;
+        lastSensorSteps = totalSinceBoot;
 
         if ((activeRun || chestReady) && delta > 0) {
             processGameSteps(delta);
@@ -419,11 +443,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         contentRoot.addView(bagPanel);
 
         townPanel = darkCard();
-        townPanel.addView(text("TOWN", 26, Color.rgb(245, 224, 177), true));
-        addLockedRow(townPanel, "Merchant");
-        addLockedRow(townPanel, "Bank");
-        addLockedRow(townPanel, "Trainer");
-        addLockedRow(townPanel, "Activity");
         contentRoot.addView(townPanel);
 
         permissionButton = actionButton("Allow step tracking", true);
@@ -468,6 +487,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return;
         }
 
+        sensorManager.unregisterListener(this);
         sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_UI);
     }
 
@@ -603,9 +623,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void finishEnemy() {
+        recordEnemyDefeated();
         if (activityMode == MODE_AREA) {
             int goldReward = areaGoldReward();
             gold += goldReward;
+            recordGoldEarned(goldReward);
             ArrayList<Item> foundItems = rollAreaLoot();
             if (!foundItems.isEmpty()) {
                 inventory.addAll(foundItems);
@@ -656,6 +678,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         inventory.add(foundItem);
         int goldReward = 18 + random.nextInt(8) + bonusGold();
         gold += goldReward;
+        recordGoldEarned(goldReward);
+        recordChestOpened();
         chestOpenedAt = System.currentTimeMillis();
         lastReward = foundItem.rarity + " - " + foundItem.name
                 + "\nAdded to inventory"
@@ -690,6 +714,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         baseline = state.baseline;
         todaySteps = state.todaySteps;
         debugStepOffset = state.debugStepOffset;
+        lastSensorSteps = state.lastSensorSteps;
+        todayGoldEarned = state.todayGoldEarned;
+        todayEnemiesDefeated = state.todayEnemiesDefeated;
+        todayChestsOpened = state.todayChestsOpened;
+        dailyRewardMask = state.dailyRewardMask;
+        activityTab = state.activityTab;
         activeRun = state.activeRun;
         chestReady = state.chestReady;
         showDevTools = state.showDevTools;
@@ -723,6 +753,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         equippedCharmId = state.equippedCharmId;
         inventory.clear();
         inventory.addAll(state.inventory);
+        dailyHistory.clear();
+        dailyHistory.addAll(state.dailyHistory);
+        updateTodayHistory();
         if (inventory.isEmpty()) {
             createStarterInventory(weaponLevel, armorLevel, bootsLevel, charmLevel);
         } else {
@@ -747,6 +780,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.baseline = baseline;
         state.todaySteps = todaySteps;
         state.debugStepOffset = debugStepOffset;
+        state.lastSensorSteps = lastSensorSteps;
+        state.todayGoldEarned = todayGoldEarned;
+        state.todayEnemiesDefeated = todayEnemiesDefeated;
+        state.todayChestsOpened = todayChestsOpened;
+        state.dailyRewardMask = dailyRewardMask;
+        state.activityTab = activityTab;
         state.activeRun = activeRun;
         state.chestReady = chestReady;
         state.showDevTools = showDevTools;
@@ -778,6 +817,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.equippedBootsId = equippedBootsId;
         state.equippedCharmId = equippedCharmId;
         state.inventory.addAll(inventory);
+        updateTodayHistory();
+        state.dailyHistory.addAll(dailyHistory);
         saveStore.save(state);
     }
 
@@ -788,7 +829,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             baseline = -1;
             todaySteps = 0;
             debugStepOffset = 0;
+            lastSensorSteps = -1;
             lastGameSteps = 0;
+            todayGoldEarned = 0;
+            todayEnemiesDefeated = 0;
+            todayChestsOpened = 0;
+            dailyRewardMask = 0;
+            updateTodayHistory();
         }
     }
 
@@ -810,6 +857,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         baseline = -1;
         todaySteps = 0;
         debugStepOffset = 0;
+        lastSensorSteps = -1;
+        todayGoldEarned = 0;
+        todayEnemiesDefeated = 0;
+        todayChestsOpened = 0;
+        dailyRewardMask = 0;
+        activityTab = ACTIVITY_TODAY;
         activeRun = false;
         chestReady = false;
         activityMode = MODE_NONE;
@@ -830,6 +883,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         bootsLevel = 1;
         charmLevel = 1;
         inventory.clear();
+        dailyHistory.clear();
         createStarterInventory(1, 1, 1, 1);
         updateEquippedStats();
         playerHp = maxPlayerHp();
@@ -1793,6 +1847,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (fightScreen == FIGHT_DUNGEONS) {
             updateDungeonsPanel();
         }
+        if (mainTab == TAB_TOWN) {
+            updateTownPanel();
+        }
 
         fightPanel.setVisibility(mainTab == TAB_FIGHT ? View.VISIBLE : View.GONE);
         skillsPanel.setVisibility(mainTab == TAB_SKILLS ? View.VISIBLE : View.GONE);
@@ -1891,6 +1948,569 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return ItemCatalog.GOBLIN_SCOUT_BOOTS;
         }
         return ItemCatalog.DEEP_CAVE_ARMOR;
+    }
+
+    private void updateTownPanel() {
+        if (townPanel == null) {
+            return;
+        }
+
+        townPanel.removeAllViews();
+        if (townScreen == TOWN_MERCHANT) {
+            updateMerchantPanel();
+            return;
+        }
+        if (townScreen == TOWN_ACTIVITY) {
+            updateActivityPanel();
+            return;
+        }
+
+        townPanel.addView(text("TOWN", 26, Color.rgb(245, 224, 177), true));
+        townPanel.addView(townActionRow("Merchant", "Sell loot and spare gear.", v -> {
+            townScreen = TOWN_MERCHANT;
+            updateTownPanel();
+        }));
+        townPanel.addView(townActionRow("Activity", "Daily steps, history, and rewards.", v -> {
+            townScreen = TOWN_ACTIVITY;
+            updateTownPanel();
+        }));
+        addLockedRow(townPanel, "Bank");
+        addLockedRow(townPanel, "Trainer");
+    }
+
+    private LinearLayout townActionRow(String title, String detail, View.OnClickListener listener) {
+        Button button = actionButton(title + "\n" + detail, false);
+        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.LEFT);
+        button.setMinHeight(dp(84));
+        button.setPadding(dp(14), dp(8), dp(14), dp(8));
+        button.setOnClickListener(listener);
+        LinearLayout wrapper = new LinearLayout(this);
+        wrapper.setOrientation(LinearLayout.VERTICAL);
+        wrapper.addView(button, fullWidthWrapContent());
+        wrapper.setLayoutParams(buttonLayoutParams());
+        return wrapper;
+    }
+
+    private void updateMerchantPanel() {
+        townPanel.addView(sectionTitle("MERCHANT"));
+        townPanel.addView(merchantHeroPanel());
+        townPanel.addView(merchantSellList());
+        Button backButton = actionButton("Back", false);
+        backButton.setOnClickListener(v -> {
+            townScreen = TOWN_HOME;
+            updateTownPanel();
+        });
+        townPanel.addView(backButton, buttonLayoutParams());
+    }
+
+    private void updateActivityPanel() {
+        updateTodayHistory();
+        townPanel.addView(sectionTitle("ACTIVITY"));
+        townPanel.addView(activityTabs());
+        if (activityTab == ACTIVITY_WEEK) {
+            townPanel.addView(activityHistoryPanel(7, "This Week"));
+        } else if (activityTab == ACTIVITY_MONTH) {
+            townPanel.addView(activityHistoryPanel(30, "This Month"));
+        } else {
+            townPanel.addView(activityTodayPanel());
+        }
+
+        Button backButton = actionButton("Back", false);
+        backButton.setOnClickListener(v -> {
+            townScreen = TOWN_HOME;
+            updateTownPanel();
+        });
+        townPanel.addView(backButton, buttonLayoutParams());
+    }
+
+    private LinearLayout activityTabs() {
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setPadding(0, 0, 0, dp(4));
+        tabs.addView(activityTabButton("Today", ACTIVITY_TODAY), activityTabParams(0));
+        tabs.addView(activityTabButton("Week", ACTIVITY_WEEK), activityTabParams(1));
+        tabs.addView(activityTabButton("Month", ACTIVITY_MONTH), activityTabParams(2));
+        tabs.setLayoutParams(buttonLayoutParams());
+        return tabs;
+    }
+
+    private Button activityTabButton(String label, int tab) {
+        Button button = actionButton(label, activityTab == tab);
+        button.setMinHeight(dp(42));
+        button.setTextSize(14);
+        button.setOnClickListener(v -> {
+            activityTab = tab;
+            saveState();
+            updateTownPanel();
+        });
+        return button;
+    }
+
+    private LinearLayout.LayoutParams activityTabParams(int index) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        params.setMargins(index == 0 ? 0 : dp(4), 0, index == 2 ? 0 : dp(4), 0);
+        return params;
+    }
+
+    private LinearLayout activityTodayPanel() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(10), dp(10), dp(10), dp(10));
+        panel.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+
+        panel.addView(activityStatRow(R.drawable.steps_icon, "Steps today", String.valueOf(todaySteps)));
+        panel.addView(activityStatRow(R.drawable.recovery_icon, "Estimated calories", String.valueOf(estimatedCalories(todaySteps))));
+        panel.addView(activityStatRow(R.drawable.coin_icon, "Gold earned today", todayGoldEarned + "g"));
+        panel.addView(activityStatRow(R.drawable.fight_icon, "Enemies defeated", String.valueOf(todayEnemiesDefeated)));
+        panel.addView(activityStatRow(R.drawable.chest_open, "Chests opened", String.valueOf(todayChestsOpened)));
+        panel.addView(activityDivider());
+        panel.addView(activityRewardTrack());
+        panel.addView(activityDivider());
+        panel.addView(activityMiniGraph(7, "This Week"));
+        panel.setLayoutParams(buttonLayoutParams());
+        return panel;
+    }
+
+    private LinearLayout activityHistoryPanel(int days, String title) {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(8), dp(8), dp(8), dp(8));
+        panel.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+
+        List<DailyStats> stats = recentDailyStats(days);
+        int totalSteps = 0;
+        int totalGold = 0;
+        int totalEnemies = 0;
+        int totalChests = 0;
+        DailyStats bestDay = null;
+        for (DailyStats day : stats) {
+            totalSteps += day.steps;
+            totalGold += day.goldEarned;
+            totalEnemies += day.enemiesDefeated;
+            totalChests += day.chestsOpened;
+            if (bestDay == null || day.steps > bestDay.steps) {
+                bestDay = day;
+            }
+        }
+
+        panel.addView(activityMiniGraph(days, title));
+        panel.addView(activityStatRow(R.drawable.steps_icon, "Total steps", String.valueOf(totalSteps)));
+        panel.addView(activityStatRow(R.drawable.recovery_icon, "Estimated calories", String.valueOf(estimatedCalories(totalSteps))));
+        panel.addView(activityStatRow(R.drawable.coin_icon, "Gold earned", totalGold + "g"));
+        panel.addView(activityStatRow(R.drawable.fight_icon, "Enemies defeated", String.valueOf(totalEnemies)));
+        panel.addView(activityStatRow(R.drawable.chest_open, "Chests opened", String.valueOf(totalChests)));
+        panel.addView(activityStatRow(R.drawable.steps_icon, "Best step day",
+                bestDay == null ? "0" : shortDateLabel(bestDay.dateKey) + " - " + bestDay.steps));
+        panel.addView(activityDivider());
+        TextView rowsTitle = text(days == 7 ? "Daily rows" : "Recent days", 15, Color.rgb(245, 224, 177), true);
+        rowsTitle.setGravity(Gravity.CENTER);
+        rowsTitle.setPadding(0, 0, 0, dp(4));
+        panel.addView(rowsTitle);
+        int rows = days == 7 ? 7 : Math.min(10, stats.size());
+        for (int index = 0; index < rows && index < stats.size(); index += 1) {
+            DailyStats day = stats.get(stats.size() - 1 - index);
+            panel.addView(activityDayRow(day));
+        }
+        panel.setLayoutParams(buttonLayoutParams());
+        return panel;
+    }
+
+    private LinearLayout activityStatRow(int iconRes, String label, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(7), dp(5), dp(7), dp(5));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(2), dp(2), dp(2), dp(2));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), Color.rgb(80, 58, 35)));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(28), dp(28));
+        iconParams.setMargins(0, 0, dp(10), 0);
+        row.addView(icon, iconParams);
+
+        row.addView(text(label, 15, Color.rgb(226, 205, 163), false), weightedWidth(1.0f));
+        TextView valueView = text(value, 17, Color.rgb(245, 224, 177), true);
+        valueView.setGravity(Gravity.RIGHT);
+        row.addView(valueView, new LinearLayout.LayoutParams(dp(116), LinearLayout.LayoutParams.WRAP_CONTENT));
+        return row;
+    }
+
+    private LinearLayout activityRewardTrack() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(8), dp(8), dp(8), dp(8));
+        panel.setBackground(ui.panelBackground(Color.rgb(18, 16, 12), Color.rgb(80, 58, 35)));
+        TextView title = text("Step Rewards", 16, Color.rgb(245, 224, 177), true);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, dp(5));
+        panel.addView(title);
+
+        ProgressBar progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        progress.setMax(10000);
+        progress.setProgress(Math.min(todaySteps, 10000));
+        panel.addView(progress, progressLayoutParams());
+
+        LinearLayout rewards = new LinearLayout(this);
+        rewards.setOrientation(LinearLayout.HORIZONTAL);
+        rewards.addView(activityRewardButton(3000, 10, DAILY_REWARD_3000), activityRewardParams(0));
+        rewards.addView(activityRewardButton(6000, 25, DAILY_REWARD_6000), activityRewardParams(1));
+        rewards.addView(activityRewardButton(10000, 50, DAILY_REWARD_10000), activityRewardParams(2));
+        panel.addView(rewards);
+        return panel;
+    }
+
+    private Button activityRewardButton(int threshold, int rewardGold, int mask) {
+        boolean claimed = (dailyRewardMask & mask) != 0;
+        boolean available = todaySteps >= threshold && !claimed;
+        String label;
+        if (claimed) {
+            label = thresholdLabel(threshold) + "\nClaimed";
+        } else if (available) {
+            label = thresholdLabel(threshold) + "\nClaim " + rewardGold + "g";
+        } else {
+            label = thresholdLabel(threshold) + "\n" + rewardGold + "g";
+        }
+
+        Button button = actionButton(label, available);
+        button.setTextSize(12);
+        button.setMinHeight(dp(62));
+        int fill = claimed ? Color.rgb(28, 55, 26) : (available ? Color.rgb(129, 83, 31) : Color.rgb(36, 30, 22));
+        int stroke = claimed ? Color.rgb(100, 157, 73) : (available ? Color.rgb(240, 174, 55) : Color.rgb(80, 58, 35));
+        button.setBackground(ui.panelBackground(fill, stroke));
+        button.setOnClickListener(v -> {
+            if (available) {
+                claimDailyReward(mask, rewardGold);
+            }
+        });
+        return button;
+    }
+
+    private LinearLayout.LayoutParams activityRewardParams(int index) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        params.setMargins(index == 0 ? 0 : dp(4), dp(4), index == 2 ? 0 : dp(4), 0);
+        return params;
+    }
+
+    private View activityDivider() {
+        View divider = new View(this);
+        divider.setBackgroundColor(Color.rgb(55, 43, 31));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(1)
+        );
+        params.setMargins(0, dp(9), 0, dp(9));
+        divider.setLayoutParams(params);
+        return divider;
+    }
+
+    private String thresholdLabel(int threshold) {
+        return threshold >= 1000 ? (threshold / 1000) + "k steps" : threshold + " steps";
+    }
+
+    private LinearLayout activityMiniGraph(int days, String title) {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(8), dp(8), dp(8), dp(8));
+        panel.setBackground(ui.panelBackground(Color.rgb(18, 16, 12), Color.rgb(80, 58, 35)));
+        TextView titleView = text(title, 16, Color.rgb(245, 224, 177), true);
+        titleView.setGravity(Gravity.CENTER);
+        titleView.setPadding(0, 0, 0, dp(5));
+        panel.addView(titleView);
+
+        LinearLayout bars = new LinearLayout(this);
+        bars.setOrientation(LinearLayout.HORIZONTAL);
+        bars.setGravity(Gravity.BOTTOM);
+        List<DailyStats> stats = recentDailyStats(days);
+        int maxSteps = 1;
+        for (DailyStats day : stats) {
+            maxSteps = Math.max(maxSteps, day.steps);
+        }
+        int shown = days == 7 ? 7 : Math.min(10, stats.size());
+        int start = days == 7 ? 0 : Math.max(0, stats.size() - shown);
+        for (int index = start; index < stats.size(); index += 1) {
+            bars.addView(activityBar(stats.get(index), maxSteps), weightedWidth(1.0f));
+        }
+        panel.addView(bars, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(days == 7 ? 98 : 88)
+        ));
+        return panel;
+    }
+
+    private LinearLayout activityBar(DailyStats day, int maxSteps) {
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        TextView value = text(shortNumber(day.steps), 10, Color.rgb(192, 157, 100), false);
+        value.setGravity(Gravity.CENTER);
+        column.addView(value);
+        View bar = new View(this);
+        bar.setBackground(ui.panelBackground(
+                day.dateKey.equals(todayKey) ? Color.rgb(173, 141, 47) : Color.rgb(92, 139, 54),
+                day.dateKey.equals(todayKey) ? Color.rgb(240, 174, 55) : Color.rgb(126, 168, 55)
+        ));
+        int height = day.steps <= 0 ? dp(4) : Math.max(dp(8), day.steps * dp(52) / Math.max(1, maxSteps));
+        LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(dp(20), height);
+        barParams.setMargins(0, dp(2), 0, dp(3));
+        column.addView(bar, barParams);
+        TextView label = text(dayOfWeekLabel(day.dateKey), 10, Color.rgb(226, 205, 163), false);
+        label.setGravity(Gravity.CENTER);
+        column.addView(label);
+        return column;
+    }
+
+    private LinearLayout activityDayRow(DailyStats day) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(8), dp(6), dp(8), dp(6));
+        row.setBackground(ui.panelBackground(Color.rgb(30, 25, 18), Color.rgb(55, 43, 31)));
+        row.addView(text(shortDateLabel(day.dateKey), 13, Color.rgb(226, 205, 163), true), weightedWidth(0.8f));
+        row.addView(text(day.steps + " steps", 13, Color.rgb(245, 224, 177), false), weightedWidth(1.0f));
+        TextView goldText = text(day.goldEarned + "g", 13, Color.rgb(245, 224, 177), true);
+        goldText.setGravity(Gravity.RIGHT);
+        row.addView(goldText, weightedWidth(0.6f));
+        LinearLayout.LayoutParams params = buttonLayoutParams();
+        params.setMargins(0, 0, 0, dp(5));
+        row.setLayoutParams(params);
+        return row;
+    }
+
+    private void claimDailyReward(int mask, int rewardGold) {
+        if ((dailyRewardMask & mask) != 0) {
+            return;
+        }
+        dailyRewardMask |= mask;
+        gold += rewardGold;
+        recordGoldEarned(rewardGold);
+        addEvent("Claimed daily activity reward: " + rewardGold + "g.");
+        saveState();
+        updateViews();
+    }
+
+    private LinearLayout merchantHeroPanel() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(0, 0, 0, dp(8));
+
+        ImageView merchantImage = new ImageView(this);
+        merchantImage.setImageResource(R.drawable.merchant_shopkeeper);
+        merchantImage.setAdjustViewBounds(true);
+        merchantImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        panel.addView(merchantImage, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(150)
+        ));
+
+        panel.addView(merchantGoldLine());
+        panel.addView(merchantTabs());
+        panel.setLayoutParams(buttonLayoutParams());
+        return panel;
+    }
+
+    private LinearLayout merchantGoldLine() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.HORIZONTAL);
+        panel.setGravity(Gravity.CENTER_VERTICAL);
+        panel.setPadding(dp(8), dp(8), dp(8), dp(6));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.coin_icon);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(26), dp(26));
+        iconParams.setMargins(0, 0, dp(8), 0);
+        panel.addView(icon, iconParams);
+        panel.addView(text("Your Gold: " + gold + "g", 16, Color.rgb(245, 224, 177), true), weightedWidth(1.0f));
+        panel.addView(text("Sell items for gold.", 13, Color.rgb(192, 157, 100), false));
+        return panel;
+    }
+
+    private LinearLayout merchantTabs() {
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setPadding(dp(8), 0, dp(8), 0);
+        TextView sell = merchantTabLabel("Sell", true);
+        tabs.addView(sell, weightedWidth(1.0f));
+        TextView buy = merchantTabLabel("Buy later", false);
+        tabs.addView(buy, weightedWidth(1.0f));
+        return tabs;
+    }
+
+    private TextView merchantTabLabel(String label, boolean selected) {
+        TextView tab = text(label, 15, selected ? Color.WHITE : Color.rgb(192, 157, 100), true);
+        tab.setGravity(Gravity.CENTER);
+        tab.setPadding(0, dp(10), 0, dp(10));
+        tab.setBackground(ui.panelBackground(
+                selected ? Color.rgb(129, 83, 31) : Color.rgb(30, 25, 18),
+                selected ? Color.rgb(240, 174, 55) : Color.rgb(80, 58, 35)
+        ));
+        return tab;
+    }
+
+    private LinearLayout merchantSellList() {
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+
+        int rows = 0;
+        rows += addMerchantLootStack(list, ItemCatalog.GREEN_GOO);
+        rows += addMerchantLootStack(list, ItemCatalog.NAILS);
+        rows += addMerchantLootStack(list, ItemCatalog.STOLEN_TRINKET);
+        for (Item item : inventory) {
+            if (isSellableGear(item)) {
+                list.addView(merchantGearRow(item));
+                rows++;
+            }
+        }
+
+        if (rows == 0) {
+            TextView empty = text("No sellable loot or spare gear yet.", 15, Color.rgb(192, 157, 100), false);
+            empty.setGravity(Gravity.CENTER);
+            empty.setPadding(0, dp(10), 0, dp(12));
+            list.addView(empty);
+        }
+        return list;
+    }
+
+    private int addMerchantLootStack(LinearLayout list, String itemKey) {
+        int count = countItemsByKey(itemKey);
+        if (count <= 0) {
+            return 0;
+        }
+        Item item = ItemCatalog.create(0, itemKey);
+        if (item == null) {
+            return 0;
+        }
+        list.addView(merchantLootRow(item, count));
+        return 1;
+    }
+
+    private LinearLayout merchantLootRow(Item item, int count) {
+        LinearLayout row = merchantItemRowBase(item, item.name, "x" + count + " | " + item.sellValue + "g each");
+        Button sellOne = actionButton("Sell 1", false);
+        sellOne.setOnClickListener(v -> sellOneItemByKey(item.key));
+        row.addView(sellOne, new LinearLayout.LayoutParams(dp(82), dp(48)));
+        Button sellAll = actionButton("Sell All", true);
+        sellAll.setOnClickListener(v -> sellAllItemsByKey(item.key));
+        LinearLayout.LayoutParams allParams = new LinearLayout.LayoutParams(dp(92), dp(48));
+        allParams.setMargins(dp(6), 0, 0, 0);
+        row.addView(sellAll, allParams);
+        row.setLayoutParams(buttonLayoutParams());
+        return row;
+    }
+
+    private LinearLayout merchantGearRow(Item item) {
+        LinearLayout row = merchantItemRowBase(item, item.displayName(), itemStatLine(item) + " | Sell " + item.sellValue + "g");
+        Button sell = actionButton("Sell", false);
+        sell.setOnClickListener(v -> confirmSellGear(item));
+        row.addView(sell, new LinearLayout.LayoutParams(dp(92), dp(48)));
+        row.setLayoutParams(buttonLayoutParams());
+        return row;
+    }
+
+    private LinearLayout merchantItemRowBase(Item item, String title, String detail) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(8), dp(8), dp(8), dp(8));
+        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(item.iconRes);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setPadding(dp(3), dp(3), dp(3), dp(3));
+        icon.setBackground(ui.panelBackground(Color.rgb(52, 42, 28), rarityColor(item.rarity)));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(54), dp(54)));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(10), 0, dp(8), 0);
+        copy.addView(text(title, 15, Color.rgb(245, 224, 177), true));
+        copy.addView(text(detail, 12, Color.rgb(192, 157, 100), false));
+        row.addView(copy, weightedWidth(1.0f));
+        return row;
+    }
+
+    private int countItemsByKey(String itemKey) {
+        int count = 0;
+        for (Item item : inventory) {
+            if (itemKey.equals(item.key)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private void sellOneItemByKey(String itemKey) {
+        for (int i = 0; i < inventory.size(); i++) {
+            Item item = inventory.get(i);
+            if (itemKey.equals(item.key)) {
+                inventory.remove(i);
+                gold += item.sellValue;
+                saveState();
+                updateViews();
+                return;
+            }
+        }
+    }
+
+    private void sellAllItemsByKey(String itemKey) {
+        int gained = 0;
+        for (int i = inventory.size() - 1; i >= 0; i--) {
+            Item item = inventory.get(i);
+            if (itemKey.equals(item.key)) {
+                gained += item.sellValue;
+                inventory.remove(i);
+            }
+        }
+        if (gained > 0) {
+            gold += gained;
+            saveState();
+            updateViews();
+        }
+    }
+
+    private void confirmSellGear(Item item) {
+        new AlertDialog.Builder(this)
+                .setTitle("Sell " + item.name + "?")
+                .setMessage("Sell for " + item.sellValue + "g. This cannot be undone.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Sell", (dialog, which) -> sellGear(item))
+                .show();
+    }
+
+    private void sellGear(Item item) {
+        if (!isSellableGear(item)) {
+            return;
+        }
+        for (int i = 0; i < inventory.size(); i++) {
+            if (inventory.get(i).id == item.id) {
+                inventory.remove(i);
+                gold += item.sellValue;
+                saveState();
+                updateViews();
+                return;
+            }
+        }
+    }
+
+    private boolean isSellableGear(Item item) {
+        return item != null
+                && isEquippable(item)
+                && !isEquipped(item)
+                && !isNoviceItem(item)
+                && item.sellValue > 0;
+    }
+
+    private boolean isNoviceItem(Item item) {
+        return ItemCatalog.NOVICE_SWORD.equals(item.key)
+                || ItemCatalog.NOVICE_TUNIC.equals(item.key)
+                || ItemCatalog.NOVICE_BOOTS.equals(item.key)
+                || ItemCatalog.NOVICE_CHARM.equals(item.key);
     }
 
     private void stopActivity() {
@@ -2541,6 +3161,107 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "Challenging";
         }
         return "Long";
+    }
+
+    private void recordGoldEarned(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        todayGoldEarned += amount;
+        updateTodayHistory();
+    }
+
+    private void recordEnemyDefeated() {
+        todayEnemiesDefeated += 1;
+        updateTodayHistory();
+    }
+
+    private void recordChestOpened() {
+        todayChestsOpened += 1;
+        updateTodayHistory();
+    }
+
+    private void updateTodayHistory() {
+        DailyStats stats = dailyStatsFor(todayKey);
+        stats.steps = todaySteps;
+        stats.goldEarned = todayGoldEarned;
+        stats.enemiesDefeated = todayEnemiesDefeated;
+        stats.chestsOpened = todayChestsOpened;
+        stats.rewardMask = dailyRewardMask;
+        trimDailyHistory();
+    }
+
+    private DailyStats dailyStatsFor(String dateKey) {
+        for (DailyStats stats : dailyHistory) {
+            if (dateKey.equals(stats.dateKey)) {
+                return stats;
+            }
+        }
+        DailyStats stats = new DailyStats(dateKey);
+        dailyHistory.add(stats);
+        return stats;
+    }
+
+    private void trimDailyHistory() {
+        while (dailyHistory.size() > 45) {
+            dailyHistory.remove(0);
+        }
+    }
+
+    private List<DailyStats> recentDailyStats(int days) {
+        ArrayList<DailyStats> stats = new ArrayList<>();
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        Calendar calendar = Calendar.getInstance();
+        for (int index = days - 1; index >= 0; index -= 1) {
+            Calendar day = (Calendar) calendar.clone();
+            day.add(Calendar.DAY_OF_YEAR, -index);
+            String dateKey = format.format(day.getTime());
+            DailyStats existing = findDailyStats(dateKey);
+            if (existing != null) {
+                stats.add(existing);
+            } else {
+                stats.add(new DailyStats(dateKey));
+            }
+        }
+        return stats;
+    }
+
+    private DailyStats findDailyStats(String dateKey) {
+        for (DailyStats stats : dailyHistory) {
+            if (dateKey.equals(stats.dateKey)) {
+                return stats;
+            }
+        }
+        return null;
+    }
+
+    private int estimatedCalories(int steps) {
+        return Math.max(0, steps / 20);
+    }
+
+    private String shortNumber(int value) {
+        if (value >= 1000) {
+            return (value / 1000) + "k";
+        }
+        return String.valueOf(value);
+    }
+
+    private String dayOfWeekLabel(String dateKey) {
+        try {
+            Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(dateKey);
+            return new SimpleDateFormat("EEE", Locale.US).format(date);
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private String shortDateLabel(String dateKey) {
+        try {
+            Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(dateKey);
+            return new SimpleDateFormat("MMM d", Locale.US).format(date);
+        } catch (Exception ignored) {
+            return dateKey;
+        }
     }
 
     private boolean hasStepPermission() {
