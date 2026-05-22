@@ -3,7 +3,9 @@ package com.example.stepcounterbase;
 import static com.example.stepcounterbase.GameRules.SLOT_ARMOR;
 import static com.example.stepcounterbase.GameRules.SLOT_BOOTS;
 import static com.example.stepcounterbase.GameRules.SLOT_CHARM;
+import static com.example.stepcounterbase.GameRules.SLOT_CONSUMABLE;
 import static com.example.stepcounterbase.GameRules.SLOT_LOOT;
+import static com.example.stepcounterbase.GameRules.SLOT_UNLOCK;
 import static com.example.stepcounterbase.GameRules.SLOT_WEAPON;
 
 final class ItemCatalog {
@@ -26,6 +28,8 @@ final class ItemCatalog {
     static final String GREEN_GOO = "green_goo";
     static final String NAILS = "nails";
     static final String STOLEN_TRINKET = "stolen_trinket";
+    static final String BREAD = "bread";
+    static final String AUTO_EAT_MANUAL = "auto_eat_manual";
 
     private ItemCatalog() {
     }
@@ -88,6 +92,12 @@ final class ItemCatalog {
         if (STOLEN_TRINKET.equals(key)) {
             return loot(id, key, "Stolen Trinket", "Common", 7, R.drawable.item_stolen_trinket);
         }
+        if (BREAD.equals(key)) {
+            return consumable(id, key, "Bread", "Common", 2, R.drawable.item_bread);
+        }
+        if (AUTO_EAT_MANUAL.equals(key)) {
+            return unlock(id, key, "Auto-eat Manual", "Uncommon", 0, R.drawable.item_auto_eat_manual);
+        }
         return null;
     }
 
@@ -125,6 +135,12 @@ final class ItemCatalog {
         if ("Stolen Trinket".equals(name)) {
             return create(id, STOLEN_TRINKET);
         }
+        if ("Bread".equals(name)) {
+            return create(id, BREAD);
+        }
+        if ("Auto-eat Manual".equals(name)) {
+            return create(id, AUTO_EAT_MANUAL);
+        }
         return null;
     }
 
@@ -154,6 +170,16 @@ final class ItemCatalog {
 
     private static Item loot(int id, String key, String name, String rarity, int sellValue, int iconRes) {
         return new Item(id, key, SLOT_LOOT, name, rarity, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, sellValue, iconRes);
+    }
+
+    private static Item consumable(int id, String key, String name, String rarity, int sellValue, int iconRes) {
+        return new Item(id, key, SLOT_CONSUMABLE, name, rarity, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, sellValue, iconRes);
+    }
+
+    private static Item unlock(int id, String key, String name, String rarity, int sellValue, int iconRes) {
+        return new Item(id, key, SLOT_UNLOCK, name, rarity, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, sellValue, iconRes);
     }
 }

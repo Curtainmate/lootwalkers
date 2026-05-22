@@ -49,6 +49,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private static final int DAILY_REWARD_3000 = 1;
     private static final int DAILY_REWARD_6000 = 2;
     private static final int DAILY_REWARD_10000 = 4;
+    private static final int MERCHANT_SELL = 0;
+    private static final int MERCHANT_BUY = 1;
+    private static final int BREAD_HEAL_AMOUNT = 25;
+    private static final int BREAD_BUY_PRICE = 8;
+    private static final int AUTO_EAT_MANUAL_PRICE = 75;
     private final Random random = new Random();
 
     private SensorManager sensorManager;
@@ -125,6 +130,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int todayChestsOpened = 0;
     private int dailyRewardMask = 0;
     private int activityTab = ACTIVITY_TODAY;
+    private boolean autoEatUnlocked = false;
+    private int merchantTab = MERCHANT_SELL;
     private String todayKey;
 
     private boolean activeRun = false;
@@ -600,6 +607,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         int reducedDamage = Math.max(1, rawDamage * (1000 - damageReductionTenths()) / 1000);
         playerHp = Math.max(0, playerHp - reducedDamage);
         addEvent(enemyName() + " hits for " + reducedDamage + ".");
+        tryAutoEat();
         if (playerHp <= 0) {
             phase = PHASE_EXHAUSTED;
             attackCharge = 0;
@@ -620,6 +628,26 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 addEvent("Recovered enough to keep fighting.");
             }
         }
+    }
+
+    private void tryAutoEat() {
+        if (!autoEatUnlocked || playerHp <= 0 || playerHp > autoEatThresholdHp()) {
+            return;
+        }
+
+        Item bread = firstItemByKey(ItemCatalog.BREAD);
+        if (bread == null) {
+            return;
+        }
+
+        inventory.remove(bread);
+        int healed = Math.min(BREAD_HEAL_AMOUNT, maxPlayerHp() - playerHp);
+        if (healed <= 0) {
+            return;
+        }
+        playerHp += healed;
+        addEvent("Auto-eat used Bread and restored " + healed + " HP.");
+        resumeFromFoodIfReady();
     }
 
     private void finishEnemy() {
@@ -720,6 +748,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         todayChestsOpened = state.todayChestsOpened;
         dailyRewardMask = state.dailyRewardMask;
         activityTab = state.activityTab;
+        autoEatUnlocked = state.autoEatUnlocked;
+        merchantTab = state.merchantTab;
         activeRun = state.activeRun;
         chestReady = state.chestReady;
         showDevTools = state.showDevTools;
@@ -786,6 +816,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.todayChestsOpened = todayChestsOpened;
         state.dailyRewardMask = dailyRewardMask;
         state.activityTab = activityTab;
+        state.autoEatUnlocked = autoEatUnlocked;
+        state.merchantTab = merchantTab;
         state.activeRun = activeRun;
         state.chestReady = chestReady;
         state.showDevTools = showDevTools;
@@ -863,6 +895,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         todayChestsOpened = 0;
         dailyRewardMask = 0;
         activityTab = ACTIVITY_TODAY;
+        autoEatUnlocked = false;
+        merchantTab = MERCHANT_SELL;
         activeRun = false;
         chestReady = false;
         activityMode = MODE_NONE;
@@ -1565,6 +1599,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private void showItemDetails(Item item) {
         boolean equipped = isEquipped(item);
         boolean equippable = isEquippable(item);
+        boolean edible = isBread(item);
         Item current = equippedForSlot(item.slot);
 
         LinearLayout panel = new LinearLayout(this);
@@ -1589,7 +1624,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         titleCopy.setPadding(dp(12), 0, 0, 0);
         titleCopy.addView(text(item.rarity + " " + slotLabel(item.slot), 13, rarityColor(item.rarity), true));
         titleCopy.addView(text(item.displayName(), 19, Color.rgb(245, 224, 177), true));
-        String location = equippable ? (equipped ? "Currently equipped" : "In inventory") : "Merchant loot";
+        String location = equippable ? (equipped ? "Currently equipped" : "In inventory") : itemLocationLabel(item);
         titleCopy.addView(text(location, 13,
                 equipped ? Color.rgb(139, 229, 87) : Color.rgb(226, 205, 163), true));
         header.addView(titleCopy, weightedWidth(1.0f));
@@ -1611,12 +1646,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         Button closeButton = ui.actionButton("Close", false);
         Button equipButton = ui.actionButton(equipped ? "Unequip" : "Equip", true);
+        Button eatButton = ui.actionButton(playerHp >= maxPlayerHp() ? "Full HP" : "Eat", true);
 
         LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(0, dp(52), 1.0f);
         actionParams.setMargins(dp(4), 0, dp(4), 0);
         actions.addView(closeButton, actionParams);
         if (equippable) {
             actions.addView(equipButton, new LinearLayout.LayoutParams(0, dp(52), 1.0f));
+        } else if (edible) {
+            actions.addView(eatButton, new LinearLayout.LayoutParams(0, dp(52), 1.0f));
         }
         panel.addView(actions);
 
@@ -1631,6 +1669,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 equipItem(item.id);
             }
             dialog.dismiss();
+        });
+        eatButton.setOnClickListener(v -> {
+            if (eatBread(item)) {
+                dialog.dismiss();
+            }
         });
         dialog.setOnShowListener(d -> {
             if (dialog.getWindow() != null) {
@@ -1650,6 +1693,43 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private int itemIcon(Item item) {
         return item == null ? R.drawable.item_gold : item.iconRes;
+    }
+
+    private String itemLocationLabel(Item item) {
+        if (SLOT_CONSUMABLE.equals(item.slot)) {
+            return "Food";
+        }
+        if (SLOT_UNLOCK.equals(item.slot)) {
+            return "Merchant unlock";
+        }
+        return "Merchant loot";
+    }
+
+    private boolean isBread(Item item) {
+        return item != null && ItemCatalog.BREAD.equals(item.key);
+    }
+
+    private boolean eatBread(Item item) {
+        if (!isBread(item) || playerHp >= maxPlayerHp()) {
+            return false;
+        }
+        int healed = Math.min(BREAD_HEAL_AMOUNT, maxPlayerHp() - playerHp);
+        inventory.remove(item);
+        playerHp += healed;
+        addEvent("Ate Bread and restored " + healed + " HP.");
+        resumeFromFoodIfReady();
+        saveState();
+        updateViews();
+        return true;
+    }
+
+    private void resumeFromFoodIfReady() {
+        if (phase == PHASE_EXHAUSTED && playerHp >= resumeHp()) {
+            phase = PHASE_COMBAT;
+            attackCharge = 0;
+            enemyAttackCharge = 0;
+            addEvent("Recovered enough to keep fighting.");
+        }
     }
 
     private int rarityColor(String rarity) {
@@ -1966,16 +2046,56 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         townPanel.addView(text("TOWN", 26, Color.rgb(245, 224, 177), true));
-        townPanel.addView(townActionRow("Merchant", "Sell loot and spare gear.", v -> {
+        townPanel.addView(townCard(R.drawable.town_merchant_card, "Merchant", "Sell loot and spare gear.", v -> {
             townScreen = TOWN_MERCHANT;
             updateTownPanel();
         }));
-        townPanel.addView(townActionRow("Activity", "Daily steps, history, and rewards.", v -> {
+        townPanel.addView(townCard(R.drawable.town_activity_card, "Activity", "Daily steps, history, and rewards.", v -> {
             townScreen = TOWN_ACTIVITY;
             updateTownPanel();
         }));
         addLockedRow(townPanel, "Bank");
         addLockedRow(townPanel, "Trainer");
+    }
+
+    private LinearLayout townCard(int drawableRes, String title, String detail, View.OnClickListener listener) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(8), dp(8), dp(8), dp(8));
+        card.setBackground(ui.panelBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+        card.setClickable(true);
+        card.setOnClickListener(listener);
+
+        FrameLayout imageFrame = new FrameLayout(this);
+        ImageView image = new ImageView(this);
+        image.setImageResource(drawableRes);
+        image.setAdjustViewBounds(false);
+        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        imageFrame.addView(image, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        LinearLayout labelPanel = new LinearLayout(this);
+        labelPanel.setOrientation(LinearLayout.VERTICAL);
+        labelPanel.setGravity(Gravity.CENTER_VERTICAL);
+        labelPanel.setPadding(dp(14), 0, dp(8), 0);
+        labelPanel.setBackgroundColor(Color.argb(150, 12, 9, 6));
+        TextView titleView = text(title, 23, Color.rgb(245, 224, 177), true);
+        TextView detailView = text(detail, 13, Color.rgb(226, 205, 163), false);
+        detailView.setPadding(0, dp(3), 0, 0);
+        labelPanel.addView(titleView);
+        labelPanel.addView(detailView);
+        FrameLayout.LayoutParams labelParams = new FrameLayout.LayoutParams(dp(190), FrameLayout.LayoutParams.MATCH_PARENT);
+        labelParams.gravity = Gravity.LEFT | Gravity.CENTER_VERTICAL;
+        imageFrame.addView(labelPanel, labelParams);
+
+        card.addView(imageFrame, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(160)
+        ));
+        card.setLayoutParams(buttonLayoutParams());
+        return card;
     }
 
     private LinearLayout townActionRow(String title, String detail, View.OnClickListener listener) {
@@ -1994,7 +2114,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private void updateMerchantPanel() {
         townPanel.addView(sectionTitle("MERCHANT"));
         townPanel.addView(merchantHeroPanel());
-        townPanel.addView(merchantSellList());
+        townPanel.addView(merchantTab == MERCHANT_BUY ? merchantBuyList() : merchantSellList());
         Button backButton = actionButton("Back", false);
         backButton.setOnClickListener(v -> {
             townScreen = TOWN_HOME;
@@ -2333,9 +2453,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         LinearLayout tabs = new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
         tabs.setPadding(dp(8), 0, dp(8), 0);
-        TextView sell = merchantTabLabel("Sell", true);
+        TextView sell = merchantTabLabel("Sell", merchantTab == MERCHANT_SELL);
+        sell.setOnClickListener(v -> {
+            merchantTab = MERCHANT_SELL;
+            saveState();
+            updateTownPanel();
+        });
         tabs.addView(sell, weightedWidth(1.0f));
-        TextView buy = merchantTabLabel("Buy later", false);
+        TextView buy = merchantTabLabel("Buy", merchantTab == MERCHANT_BUY);
+        buy.setOnClickListener(v -> {
+            merchantTab = MERCHANT_BUY;
+            saveState();
+            updateTownPanel();
+        });
         tabs.addView(buy, weightedWidth(1.0f));
         return tabs;
     }
@@ -2348,7 +2478,52 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 selected ? Color.rgb(129, 83, 31) : Color.rgb(30, 25, 18),
                 selected ? Color.rgb(240, 174, 55) : Color.rgb(80, 58, 35)
         ));
+        tab.setClickable(true);
         return tab;
+    }
+
+    private LinearLayout merchantBuyList() {
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.addView(merchantBuyRow(
+                ItemCatalog.create(0, ItemCatalog.BREAD),
+                BREAD_BUY_PRICE,
+                "Restores " + BREAD_HEAL_AMOUNT + " HP. Auto-eat can use it.",
+                v -> buyBread()
+        ));
+        list.addView(merchantBuyRow(
+                ItemCatalog.create(0, ItemCatalog.AUTO_EAT_MANUAL),
+                AUTO_EAT_MANUAL_PRICE,
+                autoEatUnlocked ? "Unlocked. Uses Bread below 30% HP." : "Unlocks automatic Bread use below 30% HP.",
+                v -> buyAutoEatManual()
+        ));
+        return list;
+    }
+
+    private LinearLayout merchantBuyRow(Item item, int price, String detail, View.OnClickListener listener) {
+        LinearLayout row = merchantItemRowBase(item, item.name, detail + " | Price " + price + "g");
+        Button buy = actionButton(autoEatBuyButtonLabel(item, price), canBuy(item, price));
+        buy.setOnClickListener(listener);
+        row.addView(buy, new LinearLayout.LayoutParams(dp(96), dp(52)));
+        row.setLayoutParams(buttonLayoutParams());
+        return row;
+    }
+
+    private String autoEatBuyButtonLabel(Item item, int price) {
+        if (ItemCatalog.AUTO_EAT_MANUAL.equals(item.key) && autoEatUnlocked) {
+            return "Owned";
+        }
+        return gold >= price ? "Buy" : price + "g";
+    }
+
+    private boolean canBuy(Item item, int price) {
+        if (item == null) {
+            return false;
+        }
+        if (ItemCatalog.AUTO_EAT_MANUAL.equals(item.key) && autoEatUnlocked) {
+            return false;
+        }
+        return gold >= price;
     }
 
     private LinearLayout merchantSellList() {
@@ -2443,6 +2618,37 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             }
         }
         return count;
+    }
+
+    private Item firstItemByKey(String itemKey) {
+        for (Item item : inventory) {
+            if (itemKey.equals(item.key)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private void buyBread() {
+        if (gold < BREAD_BUY_PRICE) {
+            return;
+        }
+        gold -= BREAD_BUY_PRICE;
+        inventory.add(ItemCatalog.create(nextItemId++, ItemCatalog.BREAD));
+        addEvent("Bought Bread.");
+        saveState();
+        updateViews();
+    }
+
+    private void buyAutoEatManual() {
+        if (autoEatUnlocked || gold < AUTO_EAT_MANUAL_PRICE) {
+            return;
+        }
+        gold -= AUTO_EAT_MANUAL_PRICE;
+        autoEatUnlocked = true;
+        addEvent("Auto-eat unlocked.");
+        saveState();
+        updateViews();
     }
 
     private void sellOneItemByKey(String itemKey) {
@@ -2548,6 +2754,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (SLOT_LOOT.equals(item.slot)) {
             return "Sell to merchant for " + item.sellValue + "g";
         }
+        if (SLOT_CONSUMABLE.equals(item.slot)) {
+            return "Restores " + BREAD_HEAL_AMOUNT + " HP";
+        }
+        if (SLOT_UNLOCK.equals(item.slot)) {
+            return "Unlocks automatic Bread use below 30% HP";
+        }
         String line = item.damageBonus > 0 ? "+" + item.damageBonus + " damage" : "";
         if (item.recoveryBonus > 0) {
             line += (line.isEmpty() ? "" : ", ") + "+" + item.recoveryBonus + " recovery";
@@ -2581,6 +2793,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
         if (SLOT_LOOT.equals(slot)) {
             return "Loot";
+        }
+        if (SLOT_CONSUMABLE.equals(slot)) {
+            return "Food";
+        }
+        if (SLOT_UNLOCK.equals(slot)) {
+            return "Unlock";
         }
         return "Charm";
     }
@@ -2654,7 +2872,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private boolean isEquippable(Item item) {
-        return item != null && !SLOT_LOOT.equals(item.slot);
+        return item != null && !SLOT_LOOT.equals(item.slot)
+                && !SLOT_CONSUMABLE.equals(item.slot)
+                && !SLOT_UNLOCK.equals(item.slot);
     }
 
     private Item equippedWeapon() {
@@ -3142,6 +3362,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private int resumeHp() {
         return CombatSystem.resumeHp(maxPlayerHp());
+    }
+
+    private int autoEatThresholdHp() {
+        return Math.max(1, maxPlayerHp() * 30 / 100);
     }
 
     private boolean isBossFight() {

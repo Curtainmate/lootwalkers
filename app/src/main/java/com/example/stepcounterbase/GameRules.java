@@ -6,6 +6,8 @@ final class GameRules {
     static final String SLOT_BOOTS = "boots";
     static final String SLOT_CHARM = "charm";
     static final String SLOT_LOOT = "loot";
+    static final String SLOT_CONSUMABLE = "consumable";
+    static final String SLOT_UNLOCK = "unlock";
 
     static final int PHASE_TRAVEL = 0;
     static final int PHASE_COMBAT = 1;

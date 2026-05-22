@@ -21,6 +21,8 @@ final class SaveStore {
     private static final String DAILY_REWARD_MASK_KEY = "daily_reward_mask";
     private static final String ACTIVITY_TAB_KEY = "activity_tab";
     private static final String DAILY_HISTORY_KEY = "daily_history";
+    private static final String AUTO_EAT_UNLOCKED_KEY = "auto_eat_unlocked";
+    private static final String MERCHANT_TAB_KEY = "merchant_tab";
     private static final String ACTIVE_KEY = "active_run";
     private static final String SHOW_DEV_TOOLS_KEY = "show_dev_tools";
     private static final String PHASE_KEY = "phase";
@@ -80,6 +82,8 @@ final class SaveStore {
         state.chestReady = prefs.getBoolean(CHEST_READY_KEY, false);
         state.showDevTools = prefs.getBoolean(SHOW_DEV_TOOLS_KEY, false);
         state.activityTab = prefs.getInt(ACTIVITY_TAB_KEY, 0);
+        state.autoEatUnlocked = prefs.getBoolean(AUTO_EAT_UNLOCKED_KEY, false);
+        state.merchantTab = prefs.getInt(MERCHANT_TAB_KEY, 0);
         state.phase = prefs.getInt(PHASE_KEY, 0);
         state.encounterIndex = prefs.getInt(ENCOUNTER_KEY, 0);
         state.travelLeft = prefs.getInt(TRAVEL_LEFT_KEY, 0);
@@ -136,6 +140,8 @@ final class SaveStore {
                 .putInt(TODAY_CHESTS_OPENED_KEY, state.todayChestsOpened)
                 .putInt(DAILY_REWARD_MASK_KEY, state.dailyRewardMask)
                 .putInt(ACTIVITY_TAB_KEY, state.activityTab)
+                .putBoolean(AUTO_EAT_UNLOCKED_KEY, state.autoEatUnlocked)
+                .putInt(MERCHANT_TAB_KEY, state.merchantTab)
                 .putBoolean(ACTIVE_KEY, state.activeRun)
                 .putBoolean(CHEST_READY_KEY, state.chestReady)
                 .putBoolean(SHOW_DEV_TOOLS_KEY, state.showDevTools)
