@@ -13,6 +13,8 @@ final class GameState {
     int todayChestsOpened = 0;
     int dailyRewardMask = 0;
     int activityTab = 0;
+    boolean autoEatUnlocked = false;
+    int merchantTab = 0;
 
     boolean activeRun = false;
     boolean chestReady = false;
