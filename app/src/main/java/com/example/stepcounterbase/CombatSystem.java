@@ -39,6 +39,18 @@ final class CombatSystem {
         return 100;
     }
 
+    static int restlessBonesMaxHp() {
+        return 130;
+    }
+
+    static int graveRatMaxHp() {
+        return 95;
+    }
+
+    static int lostSpiritMaxHp() {
+        return 170;
+    }
+
     static String enemyName(boolean boss) {
         return boss ? "Goblin Chief" : "Cave Goblin";
     }
@@ -53,6 +65,18 @@ final class CombatSystem {
 
     static String raggedBanditName() {
         return "Ragged Bandit";
+    }
+
+    static String restlessBonesName() {
+        return "Restless Bones";
+    }
+
+    static String graveRatName() {
+        return "Grave Rat";
+    }
+
+    static String lostSpiritName() {
+        return "Lost Spirit";
     }
 
     static int enemyMaxHit(boolean boss) {
@@ -71,6 +95,18 @@ final class CombatSystem {
         return 6;
     }
 
+    static int restlessBonesMaxHit() {
+        return 9;
+    }
+
+    static int graveRatMaxHit() {
+        return 5;
+    }
+
+    static int lostSpiritMaxHit() {
+        return 12;
+    }
+
     static int enemyAttackInterval(boolean boss) {
         return boss ? 90 : 115;
     }
@@ -85,6 +121,18 @@ final class CombatSystem {
 
     static int raggedBanditAttackInterval() {
         return 55;
+    }
+
+    static int restlessBonesAttackInterval() {
+        return 90;
+    }
+
+    static int graveRatAttackInterval() {
+        return 45;
+    }
+
+    static int lostSpiritAttackInterval() {
+        return 105;
     }
 
     static int maxPlayerHp(int armorLevel, int bootsLevel) {

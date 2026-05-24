@@ -14,6 +14,7 @@ final class GameState {
     int dailyRewardMask = 0;
     int activityTab = 0;
     boolean autoEatUnlocked = false;
+    boolean forgottenGraveyardUnlocked = false;
     int merchantTab = 0;
 
     boolean activeRun = false;

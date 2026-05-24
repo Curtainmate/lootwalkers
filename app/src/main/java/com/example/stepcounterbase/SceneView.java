@@ -34,11 +34,19 @@ final class SceneView extends View {
 
         boolean sceneEnemyIsRaggedBandit();
 
+        boolean sceneEnemyIsRestlessBones();
+
+        boolean sceneEnemyIsGraveRat();
+
+        boolean sceneEnemyIsLostSpirit();
+
         boolean sceneChestReady();
 
         long sceneChestOpenedAt();
 
         boolean sceneUseGrassyFields();
+
+        boolean sceneUseForgottenGraveyard();
     }
 
     private static final int FRAME_COUNT = 4;
@@ -48,10 +56,14 @@ final class SceneView extends View {
     private static final int SLIME_BASELINE_OFFSET_DP = 5;
     private static final int SCARECROW_BASELINE_OFFSET_DP = -5;
     private static final int BANDIT_BASELINE_OFFSET_DP = -4;
+    private static final int RESTLESS_BONES_BASELINE_OFFSET_DP = -5;
+    private static final int GRAVE_RAT_BASELINE_OFFSET_DP = 2;
+    private static final int LOST_SPIRIT_BASELINE_OFFSET_DP = -17;
 
     private final Model model;
     private final Bitmap caveBackground;
     private final Bitmap grassyFieldsBackground;
+    private final Bitmap forgottenGraveyardBackground;
     private final Bitmap heroIdle;
     private final Bitmap heroWalk;
     private final Bitmap goblin;
@@ -59,6 +71,9 @@ final class SceneView extends View {
     private final Bitmap greenSlime;
     private final Bitmap runawayScarecrow;
     private final Bitmap raggedBandit;
+    private final Bitmap restlessBones;
+    private final Bitmap graveRat;
+    private final Bitmap lostSpirit;
     private final Bitmap chestOpening;
     private final Paint paint = new Paint();
     private final Paint shadePaint = new Paint();
@@ -70,6 +85,7 @@ final class SceneView extends View {
         this.model = model;
         caveBackground = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_dungeon);
         grassyFieldsBackground = BitmapFactory.decodeResource(getResources(), R.drawable.background_grassy_fields);
+        forgottenGraveyardBackground = BitmapFactory.decodeResource(getResources(), R.drawable.background_forgotten_graveyard);
         heroIdle = BitmapFactory.decodeResource(getResources(), R.drawable.hero_idle);
         heroWalk = BitmapFactory.decodeResource(getResources(), R.drawable.hero_walk);
         goblin = BitmapFactory.decodeResource(getResources(), R.drawable.goblin);
@@ -77,6 +93,9 @@ final class SceneView extends View {
         greenSlime = BitmapFactory.decodeResource(getResources(), R.drawable.green_slime_enemy_sprites);
         runawayScarecrow = BitmapFactory.decodeResource(getResources(), R.drawable.runaway_scarecrow_enemy_sprites);
         raggedBandit = BitmapFactory.decodeResource(getResources(), R.drawable.ragged_bandit_enemy_sprites);
+        restlessBones = BitmapFactory.decodeResource(getResources(), R.drawable.restless_bones_enemy_sprites);
+        graveRat = BitmapFactory.decodeResource(getResources(), R.drawable.grave_rat_enemy_sprites);
+        lostSpirit = BitmapFactory.decodeResource(getResources(), R.drawable.lost_spirit_enemy_sprites);
         chestOpening = BitmapFactory.decodeResource(getResources(), R.drawable.chest_opening);
         shadePaint.setColor(Color.argb(70, 0, 0, 0));
         paint.setAntiAlias(false);
@@ -103,7 +122,10 @@ final class SceneView extends View {
             boolean slime = model.sceneEnemyIsGreenSlime();
             boolean scarecrow = model.sceneEnemyIsRunawayScarecrow();
             boolean bandit = model.sceneEnemyIsRaggedBandit();
-            Bitmap enemySheet = bandit ? raggedBandit : (scarecrow ? runawayScarecrow : (slime ? greenSlime : (boss ? goblinBoss : goblin)));
+            boolean bones = model.sceneEnemyIsRestlessBones();
+            boolean rat = model.sceneEnemyIsGraveRat();
+            boolean spirit = model.sceneEnemyIsLostSpirit();
+            Bitmap enemySheet = spirit ? lostSpirit : (rat ? graveRat : (bones ? restlessBones : (bandit ? raggedBandit : (scarecrow ? runawayScarecrow : (slime ? greenSlime : (boss ? goblinBoss : goblin))))));
             int enemySize = boss
                     ? Math.min(dp(145), (int) (getHeight() * 0.88f))
                     : slime
@@ -112,12 +134,21 @@ final class SceneView extends View {
                     ? Math.min(dp(118), (int) (getHeight() * 0.76f))
                     : bandit
                     ? Math.min(dp(108), (int) (getHeight() * 0.72f))
+                    : bones
+                    ? Math.min(dp(110), (int) (getHeight() * 0.74f))
+                    : rat
+                    ? Math.min(dp(104), (int) (getHeight() * 0.62f))
+                    : spirit
+                    ? Math.min(dp(124), (int) (getHeight() * 0.82f))
                     : Math.min(dp(112), (int) (getHeight() * 0.75f));
             int enemyX = getWidth() - enemySize - dp(22);
             int enemyBaselineOffset = boss ? BOSS_BASELINE_OFFSET_DP
                     : (slime ? SLIME_BASELINE_OFFSET_DP
                     : (scarecrow ? SCARECROW_BASELINE_OFFSET_DP
-                    : (bandit ? BANDIT_BASELINE_OFFSET_DP : GOBLIN_BASELINE_OFFSET_DP)));
+                    : (bandit ? BANDIT_BASELINE_OFFSET_DP
+                    : (bones ? RESTLESS_BONES_BASELINE_OFFSET_DP
+                    : (rat ? GRAVE_RAT_BASELINE_OFFSET_DP
+                    : (spirit ? LOST_SPIRIT_BASELINE_OFFSET_DP : GOBLIN_BASELINE_OFFSET_DP))))));
             int enemyY = ground - enemySize + dp(enemyBaselineOffset);
             drawFrame(canvas, enemySheet, frame, enemyX, enemyY, enemySize, enemySize);
             drawHpBar(canvas, enemyX, enemyY - dp(18), enemySize, Math.max(0, model.sceneEnemyHp()),
@@ -138,7 +169,9 @@ final class SceneView extends View {
     }
 
     private void drawBackground(Canvas canvas) {
-        Bitmap background = model.sceneUseGrassyFields() ? grassyFieldsBackground : caveBackground;
+        Bitmap background = model.sceneUseForgottenGraveyard()
+                ? forgottenGraveyardBackground
+                : (model.sceneUseGrassyFields() ? grassyFieldsBackground : caveBackground);
         if (background == null) {
             canvas.drawColor(Color.rgb(35, 45, 39));
             return;
