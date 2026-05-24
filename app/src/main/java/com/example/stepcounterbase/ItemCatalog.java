@@ -25,11 +25,23 @@ final class ItemCatalog {
     static final String DEEP_CAVE_ARMOR = "deep_cave_armor";
     static final String GOBLIN_SCOUT_BOOTS = "goblin_scout_boots";
     static final String GOBLIN_TOOTH_CHARM = "goblin_tooth_charm";
+    static final String GRAVEKEEPER_BLADE = "gravekeeper_blade";
+    static final String GRAVEKEEPER_VEST = "gravekeeper_vest";
+    static final String GRAVEKEEPER_BOOTS = "gravekeeper_boots";
+    static final String GRAVEKEEPER_TOKEN = "gravekeeper_token";
+    static final String MOONLIT_WARDEN_SABER = "moonlit_warden_saber";
+    static final String MOONLIT_WARDEN_MAIL = "moonlit_warden_mail";
+    static final String MOONLIT_WARDEN_BOOTS = "moonlit_warden_boots";
+    static final String MOONLIT_WARDEN_LOCKET = "moonlit_warden_locket";
     static final String GREEN_GOO = "green_goo";
     static final String NAILS = "nails";
     static final String STOLEN_TRINKET = "stolen_trinket";
+    static final String BONE_CHIPS = "bone_chips";
+    static final String RAT_TAIL = "rat_tail";
+    static final String FADED_ECTOPLASM = "faded_ectoplasm";
     static final String BREAD = "bread";
     static final String AUTO_EAT_MANUAL = "auto_eat_manual";
+    static final String FORGOTTEN_GRAVEYARD_MAP = "forgotten_graveyard_map";
 
     private ItemCatalog() {
     }
@@ -83,6 +95,30 @@ final class ItemCatalog {
         if (GOBLIN_TOOTH_CHARM.equals(key)) {
             return charm(id, key, "Goblin Tooth Charm", "Uncommon", 7, 0, 2, 0, 23, R.drawable.goblin_tooth_charm);
         }
+        if (GRAVEKEEPER_BLADE.equals(key)) {
+            return weapon(id, key, "Gravekeeper Blade", "Uncommon", 14, 18, 58, 0, 26, R.drawable.gravekeeper_blade);
+        }
+        if (GRAVEKEEPER_VEST.equals(key)) {
+            return armor(id, key, "Gravekeeper Vest", "Uncommon", 38, 35, 28, R.drawable.gravekeeper_vest);
+        }
+        if (GRAVEKEEPER_BOOTS.equals(key)) {
+            return boots(id, key, "Gravekeeper Boots", "Uncommon", 18, 20, 3, 24, R.drawable.gravekeeper_boots);
+        }
+        if (GRAVEKEEPER_TOKEN.equals(key)) {
+            return charm(id, key, "Gravekeeper Token", "Uncommon", 6, 3, 1, 0, 25, R.drawable.gravekeeper_token);
+        }
+        if (MOONLIT_WARDEN_SABER.equals(key)) {
+            return weapon(id, key, "Moonlit Warden Saber", "Rare", 19, 25, 62, 0, 55, R.drawable.moonlit_warden_saber);
+        }
+        if (MOONLIT_WARDEN_MAIL.equals(key)) {
+            return armor(id, key, "Moonlit Warden Mail", "Rare", 58, 55, 62, R.drawable.moonlit_warden_mail);
+        }
+        if (MOONLIT_WARDEN_BOOTS.equals(key)) {
+            return boots(id, key, "Moonlit Warden Boots", "Rare", 26, 30, 5, 52, R.drawable.moonlit_warden_boots);
+        }
+        if (MOONLIT_WARDEN_LOCKET.equals(key)) {
+            return charm(id, key, "Moonlit Warden Locket", "Rare", 9, 4, 2, 0, 54, R.drawable.moonlit_warden_locket);
+        }
         if (GREEN_GOO.equals(key)) {
             return loot(id, key, "Green Goo", "Common", 3, R.drawable.item_green_goo);
         }
@@ -92,11 +128,23 @@ final class ItemCatalog {
         if (STOLEN_TRINKET.equals(key)) {
             return loot(id, key, "Stolen Trinket", "Common", 7, R.drawable.item_stolen_trinket);
         }
+        if (BONE_CHIPS.equals(key)) {
+            return loot(id, key, "Bone Chips", "Common", 9, R.drawable.item_bone_chips);
+        }
+        if (RAT_TAIL.equals(key)) {
+            return loot(id, key, "Rat Tail", "Common", 9, R.drawable.item_rat_tail);
+        }
+        if (FADED_ECTOPLASM.equals(key)) {
+            return loot(id, key, "Faded Ectoplasm", "Common", 12, R.drawable.item_faded_ectoplasm);
+        }
         if (BREAD.equals(key)) {
             return consumable(id, key, "Bread", "Common", 2, R.drawable.item_bread);
         }
         if (AUTO_EAT_MANUAL.equals(key)) {
             return unlock(id, key, "Auto-eat Manual", "Uncommon", 0, R.drawable.item_auto_eat_manual);
+        }
+        if (FORGOTTEN_GRAVEYARD_MAP.equals(key)) {
+            return unlock(id, key, "Forgotten Graveyard Map", "Uncommon", 0, R.drawable.map_forgotten_graveyard);
         }
         return null;
     }
@@ -126,6 +174,30 @@ final class ItemCatalog {
         if ("Goblin Tooth Charm".equals(name)) {
             return create(id, GOBLIN_TOOTH_CHARM);
         }
+        if ("Gravekeeper Blade".equals(name)) {
+            return create(id, GRAVEKEEPER_BLADE);
+        }
+        if ("Gravekeeper Vest".equals(name)) {
+            return create(id, GRAVEKEEPER_VEST);
+        }
+        if ("Gravekeeper Boots".equals(name)) {
+            return create(id, GRAVEKEEPER_BOOTS);
+        }
+        if ("Gravekeeper Token".equals(name)) {
+            return create(id, GRAVEKEEPER_TOKEN);
+        }
+        if ("Moonlit Warden Saber".equals(name)) {
+            return create(id, MOONLIT_WARDEN_SABER);
+        }
+        if ("Moonlit Warden Mail".equals(name)) {
+            return create(id, MOONLIT_WARDEN_MAIL);
+        }
+        if ("Moonlit Warden Boots".equals(name)) {
+            return create(id, MOONLIT_WARDEN_BOOTS);
+        }
+        if ("Moonlit Warden Locket".equals(name)) {
+            return create(id, MOONLIT_WARDEN_LOCKET);
+        }
         if ("Green Goo".equals(name)) {
             return create(id, GREEN_GOO);
         }
@@ -135,11 +207,23 @@ final class ItemCatalog {
         if ("Stolen Trinket".equals(name)) {
             return create(id, STOLEN_TRINKET);
         }
+        if ("Bone Chips".equals(name)) {
+            return create(id, BONE_CHIPS);
+        }
+        if ("Rat Tail".equals(name)) {
+            return create(id, RAT_TAIL);
+        }
+        if ("Faded Ectoplasm".equals(name)) {
+            return create(id, FADED_ECTOPLASM);
+        }
         if ("Bread".equals(name)) {
             return create(id, BREAD);
         }
         if ("Auto-eat Manual".equals(name)) {
             return create(id, AUTO_EAT_MANUAL);
+        }
+        if ("Forgotten Graveyard Map".equals(name)) {
+            return create(id, FORGOTTEN_GRAVEYARD_MAP);
         }
         return null;
     }

@@ -37,6 +37,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
     private static final int AREA_DEEP_FOREST = 0;
     private static final int AREA_GRASSY_FIELDS = 1;
+    private static final int AREA_FORGOTTEN_GRAVEYARD = 2;
     private static final int AREA_ENEMY_GREEN_SLIME = 0;
     private static final int AREA_ENEMY_RUNAWAY_SCARECROW = 1;
     private static final int AREA_ENEMY_RAGGED_BANDIT = 2;
@@ -54,6 +55,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private static final int BREAD_HEAL_AMOUNT = 25;
     private static final int BREAD_BUY_PRICE = 8;
     private static final int AUTO_EAT_MANUAL_PRICE = 75;
+    private static final int FORGOTTEN_GRAVEYARD_MAP_PRICE = 120;
     private final Random random = new Random();
 
     private SensorManager sensorManager;
@@ -131,6 +133,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int dailyRewardMask = 0;
     private int activityTab = ACTIVITY_TODAY;
     private boolean autoEatUnlocked = false;
+    private boolean forgottenGraveyardUnlocked = false;
     private int merchantTab = MERCHANT_SELL;
     private String todayKey;
 
@@ -329,10 +332,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightPanel.addView(fightHubPanel);
 
         areasPanel = darkCard();
-        areasPanel.addView(sectionTitle("AREAS"));
-        areasPanel.addView(adventureCard(R.drawable.title_grassy_fields, "Grassy Fields", "A sunny beginner meadow. This is the first main area we will build out.", v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
-        areasPanel.addView(testAreaCard(R.drawable.card_areas_deep_forest, v -> showAreaEnemy(AREA_DEEP_FOREST)));
-        areasPanel.addView(backButton());
+        updateAreasPanel();
         fightPanel.addView(areasPanel);
 
         areaEnemyPanel = darkCard();
@@ -749,6 +749,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         dailyRewardMask = state.dailyRewardMask;
         activityTab = state.activityTab;
         autoEatUnlocked = state.autoEatUnlocked;
+        forgottenGraveyardUnlocked = state.forgottenGraveyardUnlocked;
         merchantTab = state.merchantTab;
         activeRun = state.activeRun;
         chestReady = state.chestReady;
@@ -769,6 +770,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         activityMode = state.activityMode;
         selectedArea = state.selectedArea;
         selectedAreaEnemy = state.selectedAreaEnemy;
+        if (selectedArea == AREA_DEEP_FOREST || (selectedArea == AREA_FORGOTTEN_GRAVEYARD && !forgottenGraveyardUnlocked)) {
+            selectedArea = AREA_GRASSY_FIELDS;
+            selectedAreaEnemy = AREA_ENEMY_GREEN_SLIME;
+        }
         mainTab = state.mainTab;
         fightScreen = state.fightScreen;
         gold = state.gold;
@@ -817,6 +822,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.dailyRewardMask = dailyRewardMask;
         state.activityTab = activityTab;
         state.autoEatUnlocked = autoEatUnlocked;
+        state.forgottenGraveyardUnlocked = forgottenGraveyardUnlocked;
         state.merchantTab = merchantTab;
         state.activeRun = activeRun;
         state.chestReady = chestReady;
@@ -896,6 +902,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         dailyRewardMask = 0;
         activityTab = ACTIVITY_TODAY;
         autoEatUnlocked = false;
+        forgottenGraveyardUnlocked = false;
         merchantTab = MERCHANT_SELL;
         activeRun = false;
         chestReady = false;
@@ -1040,7 +1047,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private String areaName() {
-        return selectedArea == AREA_GRASSY_FIELDS ? "Grassy Fields" : "Deep Forest";
+        if (selectedArea == AREA_GRASSY_FIELDS) {
+            return "Grassy Fields";
+        }
+        if (selectedArea == AREA_FORGOTTEN_GRAVEYARD) {
+            return "Forgotten Graveyard";
+        }
+        return "Grassy Fields";
     }
 
     private String activityStatus() {
@@ -1596,6 +1609,65 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return card;
     }
 
+    private FrameLayout areaBannerCard(int drawableRes, String title, String detail, String badgeText,
+                                       View.OnClickListener listener) {
+        FrameLayout card = new FrameLayout(this);
+        card.setPadding(dp(8), dp(8), dp(8), dp(8));
+        card.setBackground(ui.panelBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+        if (listener != null) {
+            card.setClickable(true);
+            card.setOnClickListener(listener);
+        }
+
+        FrameLayout imageFrame = new FrameLayout(this);
+        ImageView image = new ImageView(this);
+        image.setImageResource(drawableRes);
+        image.setAdjustViewBounds(false);
+        image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        imageFrame.addView(image, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        LinearLayout labelPanel = new LinearLayout(this);
+        labelPanel.setOrientation(LinearLayout.VERTICAL);
+        labelPanel.setGravity(Gravity.CENTER_VERTICAL);
+        labelPanel.setPadding(dp(14), 0, dp(8), 0);
+        labelPanel.setBackgroundColor(Color.argb(145, 12, 9, 6));
+        TextView titleView = text(title, 22, Color.rgb(245, 224, 177), true);
+        TextView detailView = text(detail, 13, Color.rgb(226, 205, 163), false);
+        detailView.setPadding(0, dp(3), 0, 0);
+        labelPanel.addView(titleView);
+        labelPanel.addView(detailView);
+        imageFrame.addView(labelPanel, new FrameLayout.LayoutParams(
+                dp(205),
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                Gravity.LEFT | Gravity.CENTER_VERTICAL
+        ));
+
+        if (badgeText != null && !badgeText.isEmpty()) {
+            TextView badge = text(badgeText, 11, Color.rgb(245, 224, 177), true);
+            badge.setGravity(Gravity.CENTER);
+            badge.setPadding(dp(8), dp(4), dp(8), dp(4));
+            badge.setBackground(ui.panelBackground(Color.rgb(82, 34, 28), Color.rgb(240, 174, 55)));
+            FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.RIGHT | Gravity.TOP
+            );
+            badgeParams.setMargins(0, dp(10), dp(10), 0);
+            imageFrame.addView(badge, badgeParams);
+        }
+
+        card.addView(imageFrame, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                dp(140),
+                Gravity.CENTER
+        ));
+        card.setLayoutParams(buttonLayoutParams());
+        return card;
+    }
+
     private void showItemDetails(Item item) {
         boolean equipped = isEquipped(item);
         boolean equippable = isEquippable(item);
@@ -1766,6 +1838,58 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         saveState();
     }
 
+    private void openMerchantBuy() {
+        mainTab = TAB_TOWN;
+        townScreen = TOWN_MERCHANT;
+        merchantTab = MERCHANT_BUY;
+        updateMainScreens();
+        saveState();
+    }
+
+    private void showLockedGraveyardDialog() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(14), dp(18), dp(12));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.map_forgotten_graveyard);
+        icon.setAdjustViewBounds(true);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(86), dp(86));
+        iconParams.gravity = Gravity.CENTER_HORIZONTAL;
+        panel.addView(icon, iconParams);
+
+        TextView message = text("You need the Forgotten Graveyard Map to enter this area.\n\nThe Merchant sells it for "
+                + FORGOTTEN_GRAVEYARD_MAP_PRICE + "g.", 15, Color.rgb(226, 205, 163), false);
+        message.setGravity(Gravity.CENTER);
+        message.setPadding(0, dp(10), 0, dp(12));
+        panel.addView(message);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button back = actionButton("Back", false);
+        Button merchant = actionButton("Merchant", true);
+        actions.addView(back, weightedWidth(1.0f));
+        actions.addView(merchant, weightedWidth(1.0f));
+        panel.addView(actions);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Area Locked")
+                .setView(panel)
+                .create();
+        back.setOnClickListener(v -> dialog.dismiss());
+        merchant.setOnClickListener(v -> {
+            dialog.dismiss();
+            openMerchantBuy();
+        });
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+        });
+        dialog.show();
+    }
+
     private void showAreaEnemy(int area) {
         selectedArea = area;
         selectedAreaEnemy = AREA_ENEMY_GREEN_SLIME;
@@ -1784,6 +1908,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         areaEnemyTitleView.setText(areaName());
         if (selectedAreaIsGrassyFields()) {
+            areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_GREEN_SLIME));
+            areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_RUNAWAY_SCARECROW));
+            areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_RAGGED_BANDIT));
+        } else if (selectedAreaIsForgottenGraveyard()) {
             areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_GREEN_SLIME));
             areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_RUNAWAY_SCARECROW));
             areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_RAGGED_BANDIT));
@@ -1921,6 +2049,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (fightScreen == FIGHT_AREA_ENEMY) {
             updateAreaEnemyPanel();
         }
+        if (fightScreen == FIGHT_AREAS) {
+            updateAreasPanel();
+        }
         if (fightScreen == FIGHT_DUNGEON_DETAIL) {
             fightScreen = FIGHT_DUNGEONS;
         }
@@ -1948,6 +2079,29 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         styleTabButton(skillsNavButton, mainTab == TAB_SKILLS);
         styleTabButton(bagNavButton, mainTab == TAB_BAG);
         styleTabButton(townNavButton, mainTab == TAB_TOWN);
+    }
+
+    private void updateAreasPanel() {
+        if (areasPanel == null) {
+            return;
+        }
+
+        areasPanel.removeAllViews();
+        areasPanel.addView(sectionTitle("AREAS"));
+        areasPanel.addView(areaBannerCard(R.drawable.title_grassy_fields, "Grassy Fields",
+                "Beginner fields with slimes, scarecrows, and bandits.", null,
+                v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
+        areasPanel.addView(areaBannerCard(R.drawable.title_forgotten_graveyard, "Forgotten Graveyard",
+                forgottenGraveyardUnlocked ? "Undead enemies and Moonlit Warden gear." : "Buy the map from the Merchant.",
+                forgottenGraveyardUnlocked ? null : "LOCKED",
+                v -> {
+                    if (forgottenGraveyardUnlocked) {
+                        showAreaEnemy(AREA_FORGOTTEN_GRAVEYARD);
+                    } else {
+                        showLockedGraveyardDialog();
+                    }
+                }));
+        areasPanel.addView(backButton());
     }
 
     private void updateDungeonsPanel() {
@@ -2497,6 +2651,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 autoEatUnlocked ? "Unlocked. Uses Bread below 30% HP." : "Unlocks automatic Bread use below 30% HP.",
                 v -> buyAutoEatManual()
         ));
+        list.addView(merchantBuyRow(
+                ItemCatalog.create(0, ItemCatalog.FORGOTTEN_GRAVEYARD_MAP),
+                FORGOTTEN_GRAVEYARD_MAP_PRICE,
+                forgottenGraveyardUnlocked ? "Owned. Forgotten Graveyard is unlocked." : "Unlocks the Forgotten Graveyard area.",
+                v -> buyForgottenGraveyardMap()
+        ));
         return list;
     }
 
@@ -2513,6 +2673,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (ItemCatalog.AUTO_EAT_MANUAL.equals(item.key) && autoEatUnlocked) {
             return "Owned";
         }
+        if (ItemCatalog.FORGOTTEN_GRAVEYARD_MAP.equals(item.key) && forgottenGraveyardUnlocked) {
+            return "Owned";
+        }
         return gold >= price ? "Buy" : price + "g";
     }
 
@@ -2521,6 +2684,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return false;
         }
         if (ItemCatalog.AUTO_EAT_MANUAL.equals(item.key) && autoEatUnlocked) {
+            return false;
+        }
+        if (ItemCatalog.FORGOTTEN_GRAVEYARD_MAP.equals(item.key) && forgottenGraveyardUnlocked) {
             return false;
         }
         return gold >= price;
@@ -2534,6 +2700,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         rows += addMerchantLootStack(list, ItemCatalog.GREEN_GOO);
         rows += addMerchantLootStack(list, ItemCatalog.NAILS);
         rows += addMerchantLootStack(list, ItemCatalog.STOLEN_TRINKET);
+        rows += addMerchantLootStack(list, ItemCatalog.BONE_CHIPS);
+        rows += addMerchantLootStack(list, ItemCatalog.RAT_TAIL);
+        rows += addMerchantLootStack(list, ItemCatalog.FADED_ECTOPLASM);
         for (Item item : inventory) {
             if (isSellableGear(item)) {
                 list.addView(merchantGearRow(item));
@@ -2647,6 +2816,17 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         gold -= AUTO_EAT_MANUAL_PRICE;
         autoEatUnlocked = true;
         addEvent("Auto-eat unlocked.");
+        saveState();
+        updateViews();
+    }
+
+    private void buyForgottenGraveyardMap() {
+        if (forgottenGraveyardUnlocked || gold < FORGOTTEN_GRAVEYARD_MAP_PRICE) {
+            return;
+        }
+        gold -= FORGOTTEN_GRAVEYARD_MAP_PRICE;
+        forgottenGraveyardUnlocked = true;
+        addEvent("Forgotten Graveyard unlocked.");
         saveState();
         updateViews();
     }
@@ -3028,10 +3208,28 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (currentEnemyIsRaggedBandit() && !boss) {
             return CombatSystem.raggedBanditMaxHp();
         }
+        if (currentEnemyIsRestlessBones() && !boss) {
+            return CombatSystem.restlessBonesMaxHp();
+        }
+        if (currentEnemyIsGraveRat() && !boss) {
+            return CombatSystem.graveRatMaxHp();
+        }
+        if (currentEnemyIsLostSpirit() && !boss) {
+            return CombatSystem.lostSpiritMaxHp();
+        }
         return CombatSystem.enemyMaxHp(boss);
     }
 
     private String enemyName() {
+        if (currentEnemyIsLostSpirit()) {
+            return CombatSystem.lostSpiritName();
+        }
+        if (currentEnemyIsGraveRat()) {
+            return CombatSystem.graveRatName();
+        }
+        if (currentEnemyIsRestlessBones()) {
+            return CombatSystem.restlessBonesName();
+        }
         if (currentEnemyIsGreenSlime()) {
             return CombatSystem.greenSlimeName();
         }
@@ -3054,10 +3252,28 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (currentEnemyIsRaggedBandit()) {
             return CombatSystem.raggedBanditMaxHit();
         }
+        if (currentEnemyIsRestlessBones()) {
+            return CombatSystem.restlessBonesMaxHit();
+        }
+        if (currentEnemyIsGraveRat()) {
+            return CombatSystem.graveRatMaxHit();
+        }
+        if (currentEnemyIsLostSpirit()) {
+            return CombatSystem.lostSpiritMaxHit();
+        }
         return CombatSystem.enemyMaxHit(isBossFight());
     }
 
     private int enemyMinHit() {
+        if (currentEnemyIsLostSpirit()) {
+            return 8;
+        }
+        if (currentEnemyIsGraveRat()) {
+            return 3;
+        }
+        if (currentEnemyIsRestlessBones()) {
+            return 6;
+        }
         if (currentEnemyIsRunawayScarecrow()) {
             return 7;
         }
@@ -3076,6 +3292,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
         if (currentEnemyIsRaggedBandit()) {
             return CombatSystem.raggedBanditAttackInterval();
+        }
+        if (currentEnemyIsRestlessBones()) {
+            return CombatSystem.restlessBonesAttackInterval();
+        }
+        if (currentEnemyIsGraveRat()) {
+            return CombatSystem.graveRatAttackInterval();
+        }
+        if (currentEnemyIsLostSpirit()) {
+            return CombatSystem.lostSpiritAttackInterval();
         }
         return CombatSystem.enemyAttackInterval(isBossFight());
     }
@@ -3101,11 +3326,45 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 && !isBossFight();
     }
 
+    private boolean currentEnemyIsRestlessBones() {
+        return activityMode == MODE_AREA
+                && selectedArea == AREA_FORGOTTEN_GRAVEYARD
+                && selectedAreaEnemy == AREA_ENEMY_GREEN_SLIME
+                && !isBossFight();
+    }
+
+    private boolean currentEnemyIsGraveRat() {
+        return activityMode == MODE_AREA
+                && selectedArea == AREA_FORGOTTEN_GRAVEYARD
+                && selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW
+                && !isBossFight();
+    }
+
+    private boolean currentEnemyIsLostSpirit() {
+        return activityMode == MODE_AREA
+                && selectedArea == AREA_FORGOTTEN_GRAVEYARD
+                && selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT
+                && !isBossFight();
+    }
+
     private boolean selectedAreaIsGrassyFields() {
         return selectedArea == AREA_GRASSY_FIELDS;
     }
 
+    private boolean selectedAreaIsForgottenGraveyard() {
+        return selectedArea == AREA_FORGOTTEN_GRAVEYARD;
+    }
+
     private String selectedAreaEnemyName() {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                return CombatSystem.lostSpiritName();
+            }
+            if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                return CombatSystem.graveRatName();
+            }
+            return CombatSystem.restlessBonesName();
+        }
         if (!selectedAreaIsGrassyFields()) {
             return "Cave Goblin";
         }
@@ -3119,6 +3378,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private String selectedAreaEnemyStats() {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                return "HP 170 | Damage 8-12 | Attack 105 steps | Gold 7-12";
+            }
+            if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                return "HP 95 | Damage 3-5 | Attack 45 steps | Gold 5-8";
+            }
+            return "HP 130 | Damage 6-9 | Attack 90 steps | Gold 5-9";
+        }
         if (!selectedAreaIsGrassyFields()) {
             return "HP 75 | Max Hit 10 | Attack 115 steps";
         }
@@ -3132,6 +3400,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int selectedAreaPortrait() {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                return R.drawable.lost_spirit_enemy_portrait;
+            }
+            if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                return R.drawable.grave_rat_enemy_portrait;
+            }
+            return R.drawable.restless_bones_enemy_portrait;
+        }
         if (!selectedAreaIsGrassyFields()) {
             return R.drawable.portrait_cave_goblin;
         }
@@ -3149,6 +3426,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private String selectedAreaGoldRange() {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                return "7-12";
+            }
+            if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                return "5-8";
+            }
+            return "5-9";
+        }
         if (!selectedAreaIsGrassyFields()) {
             return (2 + bonusGold()) + "-" + (5 + bonusGold());
         }
@@ -3163,6 +3449,35 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private List<String> selectedAreaLootKeys(int enemy) {
         ArrayList<String> keys = new ArrayList<>();
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (enemy == AREA_ENEMY_RAGGED_BANDIT) {
+                keys.add(ItemCatalog.FADED_ECTOPLASM);
+                keys.add(ItemCatalog.IRON_SWORD);
+                keys.add(ItemCatalog.IRON_CHARM);
+                keys.add(ItemCatalog.GRAVEKEEPER_BLADE);
+                keys.add(ItemCatalog.GRAVEKEEPER_TOKEN);
+                keys.add(ItemCatalog.MOONLIT_WARDEN_SABER);
+                keys.add(ItemCatalog.MOONLIT_WARDEN_LOCKET);
+                keys.add(ItemCatalog.MOONLIT_WARDEN_MAIL);
+                return keys;
+            }
+            if (enemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                keys.add(ItemCatalog.RAT_TAIL);
+                keys.add(ItemCatalog.IRON_BOOTS);
+                keys.add(ItemCatalog.IRON_CHARM);
+                keys.add(ItemCatalog.GRAVEKEEPER_BOOTS);
+                keys.add(ItemCatalog.GRAVEKEEPER_TOKEN);
+                keys.add(ItemCatalog.MOONLIT_WARDEN_BOOTS);
+                return keys;
+            }
+            keys.add(ItemCatalog.BONE_CHIPS);
+            keys.add(ItemCatalog.IRON_ARMOR);
+            keys.add(ItemCatalog.IRON_BOOTS);
+            keys.add(ItemCatalog.GRAVEKEEPER_VEST);
+            keys.add(ItemCatalog.GRAVEKEEPER_BOOTS);
+            keys.add(ItemCatalog.MOONLIT_WARDEN_MAIL);
+            return keys;
+        }
         if (!selectedAreaIsGrassyFields()) {
             return keys;
         }
@@ -3188,6 +3503,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int areaGoldReward() {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                return 7 + random.nextInt(6);
+            }
+            if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                return 5 + random.nextInt(4);
+            }
+            return 5 + random.nextInt(5);
+        }
         if (selectedAreaIsGrassyFields() && selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
             return 2 + random.nextInt(4);
         }
@@ -3202,13 +3526,67 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private ArrayList<Item> rollAreaLoot() {
         ArrayList<Item> drops = new ArrayList<>();
-        if (!selectedAreaIsGrassyFields()) {
+        if (!selectedAreaIsGrassyFields() && !selectedAreaIsForgottenGraveyard()) {
             return drops;
         }
 
         String sellDropKey = null;
         String equipmentDropKey = null;
-        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                if (random.nextInt(100) < 60) {
+                    sellDropKey = ItemCatalog.FADED_ECTOPLASM;
+                }
+                int roll = random.nextInt(100);
+                if (roll < 10) {
+                    equipmentDropKey = ItemCatalog.IRON_SWORD;
+                } else if (roll < 20) {
+                    equipmentDropKey = ItemCatalog.IRON_CHARM;
+                } else if (roll < 33) {
+                    equipmentDropKey = ItemCatalog.GRAVEKEEPER_BLADE;
+                } else if (roll < 45) {
+                    equipmentDropKey = ItemCatalog.GRAVEKEEPER_TOKEN;
+                } else if (roll < 50) {
+                    equipmentDropKey = ItemCatalog.MOONLIT_WARDEN_SABER;
+                } else if (roll < 55) {
+                    equipmentDropKey = ItemCatalog.MOONLIT_WARDEN_LOCKET;
+                } else if (roll < 58) {
+                    equipmentDropKey = ItemCatalog.MOONLIT_WARDEN_MAIL;
+                }
+            } else if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                if (random.nextInt(100) < 60) {
+                    sellDropKey = ItemCatalog.RAT_TAIL;
+                }
+                int roll = random.nextInt(100);
+                if (roll < 12) {
+                    equipmentDropKey = ItemCatalog.IRON_BOOTS;
+                } else if (roll < 22) {
+                    equipmentDropKey = ItemCatalog.IRON_CHARM;
+                } else if (roll < 35) {
+                    equipmentDropKey = ItemCatalog.GRAVEKEEPER_BOOTS;
+                } else if (roll < 45) {
+                    equipmentDropKey = ItemCatalog.GRAVEKEEPER_TOKEN;
+                } else if (roll < 48) {
+                    equipmentDropKey = ItemCatalog.MOONLIT_WARDEN_BOOTS;
+                }
+            } else {
+                if (random.nextInt(100) < 60) {
+                    sellDropKey = ItemCatalog.BONE_CHIPS;
+                }
+                int roll = random.nextInt(100);
+                if (roll < 12) {
+                    equipmentDropKey = ItemCatalog.IRON_ARMOR;
+                } else if (roll < 22) {
+                    equipmentDropKey = ItemCatalog.IRON_BOOTS;
+                } else if (roll < 34) {
+                    equipmentDropKey = ItemCatalog.GRAVEKEEPER_VEST;
+                } else if (roll < 44) {
+                    equipmentDropKey = ItemCatalog.GRAVEKEEPER_BOOTS;
+                } else if (roll < 47) {
+                    equipmentDropKey = ItemCatalog.MOONLIT_WARDEN_MAIL;
+                }
+            }
+        } else if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
             if (random.nextInt(100) < 60) {
                 sellDropKey = ItemCatalog.STOLEN_TRINKET;
             }
@@ -3645,6 +4023,21 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     @Override
+    public boolean sceneEnemyIsRestlessBones() {
+        return currentEnemyIsRestlessBones();
+    }
+
+    @Override
+    public boolean sceneEnemyIsGraveRat() {
+        return currentEnemyIsGraveRat();
+    }
+
+    @Override
+    public boolean sceneEnemyIsLostSpirit() {
+        return currentEnemyIsLostSpirit();
+    }
+
+    @Override
     public boolean sceneChestReady() {
         return chestReady;
     }
@@ -3657,5 +4050,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     @Override
     public boolean sceneUseGrassyFields() {
         return activityMode == MODE_AREA && selectedArea == AREA_GRASSY_FIELDS;
+    }
+
+    @Override
+    public boolean sceneUseForgottenGraveyard() {
+        return activityMode == MODE_AREA && selectedArea == AREA_FORGOTTEN_GRAVEYARD;
     }
 }
