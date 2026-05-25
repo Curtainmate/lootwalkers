@@ -117,6 +117,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Button resetButton;
     private Button testStepsButton;
     private Button testBigStepsButton;
+    private Button testNextDayButton;
     private ImageView preferencesButton;
     private Button combatLogToggleButton;
     private boolean dungeonLootVisible = false;
@@ -125,6 +126,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private int baseline = -1;
     private int todaySteps = 0;
+    private int debugDayOffset = 0;
     private int debugStepOffset = 0;
     private int lastSensorSteps = -1;
     private int todayGoldEarned = 0;
@@ -198,6 +200,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     @Override
     protected void onResume() {
         super.onResume();
+        ensureCurrentDay();
+        saveState();
+        updateViews();
         startListeningIfReady();
     }
 
@@ -459,6 +464,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         resetButton = actionButton("Reset prototype", false);
         resetButton.setOnClickListener(v -> resetPrototype());
         contentRoot.addView(resetButton, buttonLayoutParams());
+        testNextDayButton = actionButton("Simulate next day", false);
+        testNextDayButton.setOnClickListener(v -> simulateNextDay());
+        contentRoot.addView(testNextDayButton, buttonLayoutParams());
 
         eventLogView = text("", 14, Color.rgb(226, 205, 163), false);
         systemView = text("", 14, Color.rgb(192, 157, 100), false);
@@ -810,6 +818,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void saveState() {
+        ensureCurrentDay();
         GameState state = new GameState();
         state.todayKey = todayKey;
         state.baseline = baseline;
@@ -863,6 +872,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private void ensureCurrentDay() {
         String currentDate = currentDateKey();
         if (!currentDate.equals(todayKey)) {
+            updateTodayHistory();
             todayKey = currentDate;
             baseline = -1;
             todaySteps = 0;
@@ -875,6 +885,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             dailyRewardMask = 0;
             updateTodayHistory();
         }
+    }
+
+    private void simulateNextDay() {
+        updateTodayHistory();
+        debugDayOffset += 1;
+        ensureCurrentDay();
+        addEvent("Dev tools: moved Activity history to " + todayKey + ".");
+        saveState();
+        updateViews();
     }
 
     private void addTestSteps(int steps) {
@@ -894,6 +913,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private void resetPrototype() {
         baseline = -1;
         todaySteps = 0;
+        debugDayOffset = 0;
         debugStepOffset = 0;
         lastSensorSteps = -1;
         todayGoldEarned = 0;
@@ -991,6 +1011,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (todayStepsView == null) {
             return;
         }
+        ensureCurrentDay();
 
         boolean hasSensor = stepCounterSensor != null;
         boolean hasPermission = hasStepPermission();
@@ -1012,6 +1033,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         permissionButton.setVisibility(hasPermission || !hasSensor ? View.GONE : View.VISIBLE);
         resetButton.setVisibility(showDevTools ? View.VISIBLE : View.GONE);
+        testNextDayButton.setVisibility(showDevTools ? View.VISIBLE : View.GONE);
         testStepsButton.setVisibility(showDevTools ? View.VISIBLE : View.GONE);
         testBigStepsButton.setVisibility(showDevTools ? View.VISIBLE : View.GONE);
 
@@ -3813,7 +3835,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private List<DailyStats> recentDailyStats(int days) {
         ArrayList<DailyStats> stats = new ArrayList<>();
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        Calendar calendar = Calendar.getInstance();
+        Calendar calendar = effectiveCalendar();
         for (int index = days - 1; index >= 0; index -= 1) {
             Calendar day = (Calendar) calendar.clone();
             day.add(Calendar.DAY_OF_YEAR, -index);
@@ -3880,7 +3902,14 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private String currentDateKey() {
-        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        Calendar calendar = effectiveCalendar();
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.getTime());
+    }
+
+    private Calendar effectiveCalendar() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, debugDayOffset);
+        return calendar;
     }
 
     private TextView text(String value, int size, int color, boolean bold) {
