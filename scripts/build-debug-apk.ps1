@@ -9,6 +9,8 @@ $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $LocalProperties = Join-Path $Root "local.properties"
 $BuildDir = Join-Path $Root "manual-build"
 $OutputApk = Join-Path $Root "app\build\outputs\apk\debug\app-debug.apk"
+$SafeVersionName = $VersionName -replace '[^A-Za-z0-9._-]', '-'
+$VersionedOutputApk = Join-Path $Root "app\build\outputs\apk\debug\lootwalkers-$SafeVersionName-debug.apk"
 $DebugKeystore = Join-Path $Root "debug.keystore"
 $JavaHome = "C:\Android Studio\jbr"
 
@@ -132,6 +134,8 @@ Invoke-Checked {
         (Join-Path $BuildDir "aligned.apk")
 } "apksigner sign"
 Invoke-Checked { & $Apksigner verify --print-certs $OutputApk } "apksigner verify"
+Copy-Item -LiteralPath $OutputApk -Destination $VersionedOutputApk -Force
 
 & $Aapt2 dump badging $OutputApk | Select-String -Pattern "package:|sdkVersion|targetSdkVersion|supports-screens"
 Get-Item $OutputApk | Select-Object FullName, Length, LastWriteTime
+Get-Item $VersionedOutputApk | Select-Object FullName, Length, LastWriteTime

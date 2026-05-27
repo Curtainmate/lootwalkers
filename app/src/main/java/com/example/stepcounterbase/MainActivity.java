@@ -2661,33 +2661,38 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private LinearLayout merchantBuyList() {
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(8), dp(4), dp(8), 0);
+        list.addView(merchantSectionLabel("Consumables"));
         list.addView(merchantBuyRow(
                 ItemCatalog.create(0, ItemCatalog.BREAD),
                 BREAD_BUY_PRICE,
-                "Restores " + BREAD_HEAL_AMOUNT + " HP. Auto-eat can use it.",
+                "Restores " + BREAD_HEAL_AMOUNT + " HP",
+                "Owned: " + countItemsByKey(ItemCatalog.BREAD),
                 v -> buyBread()
         ));
+        list.addView(merchantSectionLabel("Unlocks"));
         list.addView(merchantBuyRow(
                 ItemCatalog.create(0, ItemCatalog.AUTO_EAT_MANUAL),
                 AUTO_EAT_MANUAL_PRICE,
-                autoEatUnlocked ? "Unlocked. Uses Bread below 30% HP." : "Unlocks automatic Bread use below 30% HP.",
+                "Use Bread below 30% HP",
+                autoEatUnlocked ? "Unlocked" : "Permanent unlock",
                 v -> buyAutoEatManual()
         ));
         list.addView(merchantBuyRow(
                 ItemCatalog.create(0, ItemCatalog.FORGOTTEN_GRAVEYARD_MAP),
                 FORGOTTEN_GRAVEYARD_MAP_PRICE,
-                forgottenGraveyardUnlocked ? "Owned. Forgotten Graveyard is unlocked." : "Unlocks the Forgotten Graveyard area.",
+                "Unlocks Forgotten Graveyard",
+                forgottenGraveyardUnlocked ? "Unlocked" : "Area map",
                 v -> buyForgottenGraveyardMap()
         ));
         return list;
     }
 
-    private LinearLayout merchantBuyRow(Item item, int price, String detail, View.OnClickListener listener) {
-        LinearLayout row = merchantItemRowBase(item, item.name, detail + " | Price " + price + "g");
+    private LinearLayout merchantBuyRow(Item item, int price, String detail, String note, View.OnClickListener listener) {
+        LinearLayout row = merchantItemRowBase(item, item.name, detail, note + " | Price: " + price + "g");
         Button buy = actionButton(autoEatBuyButtonLabel(item, price), canBuy(item, price));
         buy.setOnClickListener(listener);
-        row.addView(buy, new LinearLayout.LayoutParams(dp(96), dp(52)));
-        row.setLayoutParams(buttonLayoutParams());
+        row.addView(buy, new LinearLayout.LayoutParams(dp(84), dp(48)));
         return row;
     }
 
@@ -2717,14 +2722,23 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private LinearLayout merchantSellList() {
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(8), dp(4), dp(8), 0);
 
         int rows = 0;
+        boolean hasLoot = hasMerchantLoot();
+        boolean hasGear = hasSellableGear();
+        if (hasLoot) {
+            list.addView(merchantSectionLabel("Loot"));
+        }
         rows += addMerchantLootStack(list, ItemCatalog.GREEN_GOO);
         rows += addMerchantLootStack(list, ItemCatalog.NAILS);
         rows += addMerchantLootStack(list, ItemCatalog.STOLEN_TRINKET);
         rows += addMerchantLootStack(list, ItemCatalog.BONE_CHIPS);
         rows += addMerchantLootStack(list, ItemCatalog.RAT_TAIL);
         rows += addMerchantLootStack(list, ItemCatalog.FADED_ECTOPLASM);
+        if (hasGear) {
+            list.addView(merchantSectionLabel("Spare Gear"));
+        }
         for (Item item : inventory) {
             if (isSellableGear(item)) {
                 list.addView(merchantGearRow(item));
@@ -2741,6 +2755,31 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return list;
     }
 
+    private TextView merchantSectionLabel(String label) {
+        TextView view = text(label, 13, Color.rgb(240, 174, 55), true);
+        view.setGravity(Gravity.LEFT);
+        view.setPadding(dp(2), dp(10), 0, dp(5));
+        return view;
+    }
+
+    private boolean hasMerchantLoot() {
+        return countItemsByKey(ItemCatalog.GREEN_GOO) > 0
+                || countItemsByKey(ItemCatalog.NAILS) > 0
+                || countItemsByKey(ItemCatalog.STOLEN_TRINKET) > 0
+                || countItemsByKey(ItemCatalog.BONE_CHIPS) > 0
+                || countItemsByKey(ItemCatalog.RAT_TAIL) > 0
+                || countItemsByKey(ItemCatalog.FADED_ECTOPLASM) > 0;
+    }
+
+    private boolean hasSellableGear() {
+        for (Item item : inventory) {
+            if (isSellableGear(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private int addMerchantLootStack(LinearLayout list, String itemKey) {
         int count = countItemsByKey(itemKey);
         if (count <= 0) {
@@ -2755,34 +2794,35 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private LinearLayout merchantLootRow(Item item, int count) {
-        LinearLayout row = merchantItemRowBase(item, item.name, "x" + count + " | " + item.sellValue + "g each");
+        LinearLayout row = merchantItemRowBase(item, item.name, "Owned: " + count, item.sellValue + "g each");
         Button sellOne = actionButton("Sell 1", false);
         sellOne.setOnClickListener(v -> sellOneItemByKey(item.key));
-        row.addView(sellOne, new LinearLayout.LayoutParams(dp(82), dp(48)));
+        row.addView(sellOne, new LinearLayout.LayoutParams(dp(76), dp(46)));
         Button sellAll = actionButton("Sell All", true);
         sellAll.setOnClickListener(v -> sellAllItemsByKey(item.key));
-        LinearLayout.LayoutParams allParams = new LinearLayout.LayoutParams(dp(92), dp(48));
+        LinearLayout.LayoutParams allParams = new LinearLayout.LayoutParams(dp(84), dp(46));
         allParams.setMargins(dp(6), 0, 0, 0);
         row.addView(sellAll, allParams);
-        row.setLayoutParams(buttonLayoutParams());
         return row;
     }
 
     private LinearLayout merchantGearRow(Item item) {
-        LinearLayout row = merchantItemRowBase(item, item.displayName(), itemStatLine(item) + " | Sell " + item.sellValue + "g");
+        LinearLayout row = merchantItemRowBase(item, item.displayName(), itemStatLine(item), "Sell value: " + item.sellValue + "g");
         Button sell = actionButton("Sell", false);
         sell.setOnClickListener(v -> confirmSellGear(item));
-        row.addView(sell, new LinearLayout.LayoutParams(dp(92), dp(48)));
-        row.setLayoutParams(buttonLayoutParams());
+        row.addView(sell, new LinearLayout.LayoutParams(dp(84), dp(46)));
         return row;
     }
 
-    private LinearLayout merchantItemRowBase(Item item, String title, String detail) {
+    private LinearLayout merchantItemRowBase(Item item, String title, String detail, String note) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(8), dp(8), dp(8), dp(8));
-        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), rarityColor(item.rarity)));
+        row.setPadding(dp(6), dp(7), dp(6), dp(7));
+        row.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(55, 43, 31)));
+        LinearLayout.LayoutParams rowParams = buttonLayoutParams();
+        rowParams.setMargins(0, 0, 0, dp(5));
+        row.setLayoutParams(rowParams);
 
         ImageView icon = new ImageView(this);
         icon.setImageResource(item.iconRes);
@@ -2797,6 +2837,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         copy.setPadding(dp(10), 0, dp(8), 0);
         copy.addView(text(title, 15, Color.rgb(245, 224, 177), true));
         copy.addView(text(detail, 12, Color.rgb(192, 157, 100), false));
+        if (note != null && !note.isEmpty()) {
+            copy.addView(text(note, 12, Color.rgb(226, 205, 163), false));
+        }
         row.addView(copy, weightedWidth(1.0f));
         return row;
     }
