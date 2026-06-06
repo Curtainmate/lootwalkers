@@ -40,6 +40,7 @@ final class SaveStore {
     private static final String CHEST_OPENED_AT_KEY = "chest_opened_at";
     private static final String AUTO_CHEST_CHARGE_KEY = "auto_chest_charge";
     private static final String ACTIVITY_MODE_KEY = "activity_mode";
+    private static final String SELECTED_DUNGEON_KEY = "selected_dungeon";
     private static final String MAIN_TAB_KEY = "main_tab";
     private static final String FIGHT_SCREEN_KEY = "fight_screen";
     private static final String SELECTED_AREA_KEY = "selected_area";
@@ -99,6 +100,7 @@ final class SaveStore {
         state.chestOpenedAt = prefs.getLong(CHEST_OPENED_AT_KEY, 0L);
         state.autoChestCharge = prefs.getInt(AUTO_CHEST_CHARGE_KEY, 0);
         state.activityMode = prefs.getInt(ACTIVITY_MODE_KEY, state.activeRun || state.chestReady ? MODE_DUNGEON : MODE_NONE);
+        state.selectedDungeon = prefs.getInt(SELECTED_DUNGEON_KEY, 0);
         state.mainTab = prefs.getInt(MAIN_TAB_KEY, 0);
         state.fightScreen = prefs.getInt(FIGHT_SCREEN_KEY, state.activeRun || state.chestReady ? FIGHT_COMBAT : FIGHT_HUB);
         state.selectedArea = prefs.getInt(SELECTED_AREA_KEY, 1);
@@ -161,6 +163,7 @@ final class SaveStore {
                 .putLong(CHEST_OPENED_AT_KEY, state.chestOpenedAt)
                 .putInt(AUTO_CHEST_CHARGE_KEY, state.autoChestCharge)
                 .putInt(ACTIVITY_MODE_KEY, state.activityMode)
+                .putInt(SELECTED_DUNGEON_KEY, state.selectedDungeon)
                 .putInt(MAIN_TAB_KEY, state.mainTab)
                 .putInt(FIGHT_SCREEN_KEY, state.fightScreen)
                 .putInt(SELECTED_AREA_KEY, state.selectedArea)

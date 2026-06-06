@@ -40,6 +40,10 @@ final class SceneView extends View {
 
         boolean sceneEnemyIsLostSpirit();
 
+        boolean sceneEnemyIsChapelAcolyte();
+
+        boolean sceneEnemyIsFallenPrior();
+
         boolean sceneChestReady();
 
         long sceneChestOpenedAt();
@@ -47,6 +51,8 @@ final class SceneView extends View {
         boolean sceneUseGrassyFields();
 
         boolean sceneUseForgottenGraveyard();
+
+        boolean sceneUseForgottenChapel();
     }
 
     private static final int FRAME_COUNT = 4;
@@ -59,11 +65,14 @@ final class SceneView extends View {
     private static final int RESTLESS_BONES_BASELINE_OFFSET_DP = -5;
     private static final int GRAVE_RAT_BASELINE_OFFSET_DP = 2;
     private static final int LOST_SPIRIT_BASELINE_OFFSET_DP = -17;
+    private static final int CHAPEL_ACOLYTE_BASELINE_OFFSET_DP = -2;
+    private static final int FALLEN_PRIOR_BASELINE_OFFSET_DP = 2;
 
     private final Model model;
     private final Bitmap caveBackground;
     private final Bitmap grassyFieldsBackground;
     private final Bitmap forgottenGraveyardBackground;
+    private final Bitmap forgottenChapelBackground;
     private final Bitmap heroIdle;
     private final Bitmap heroWalk;
     private final Bitmap goblin;
@@ -74,6 +83,8 @@ final class SceneView extends View {
     private final Bitmap restlessBones;
     private final Bitmap graveRat;
     private final Bitmap lostSpirit;
+    private final Bitmap chapelAcolyte;
+    private final Bitmap fallenPrior;
     private final Bitmap chestOpening;
     private final Paint paint = new Paint();
     private final Paint shadePaint = new Paint();
@@ -86,6 +97,7 @@ final class SceneView extends View {
         caveBackground = BitmapFactory.decodeResource(getResources(), R.drawable.goblin_dungeon);
         grassyFieldsBackground = BitmapFactory.decodeResource(getResources(), R.drawable.background_grassy_fields);
         forgottenGraveyardBackground = BitmapFactory.decodeResource(getResources(), R.drawable.background_forgotten_graveyard);
+        forgottenChapelBackground = BitmapFactory.decodeResource(getResources(), R.drawable.background_forgotten_chapel);
         heroIdle = BitmapFactory.decodeResource(getResources(), R.drawable.hero_idle);
         heroWalk = BitmapFactory.decodeResource(getResources(), R.drawable.hero_walk);
         goblin = BitmapFactory.decodeResource(getResources(), R.drawable.goblin);
@@ -96,6 +108,8 @@ final class SceneView extends View {
         restlessBones = BitmapFactory.decodeResource(getResources(), R.drawable.restless_bones_enemy_sprites);
         graveRat = BitmapFactory.decodeResource(getResources(), R.drawable.grave_rat_enemy_sprites);
         lostSpirit = BitmapFactory.decodeResource(getResources(), R.drawable.lost_spirit_enemy_sprites);
+        chapelAcolyte = BitmapFactory.decodeResource(getResources(), R.drawable.chapel_acolyte_enemy_sprites);
+        fallenPrior = BitmapFactory.decodeResource(getResources(), R.drawable.fallen_prior_enemy_sprites);
         chestOpening = BitmapFactory.decodeResource(getResources(), R.drawable.chest_opening);
         shadePaint.setColor(Color.argb(70, 0, 0, 0));
         paint.setAntiAlias(false);
@@ -125,9 +139,11 @@ final class SceneView extends View {
             boolean bones = model.sceneEnemyIsRestlessBones();
             boolean rat = model.sceneEnemyIsGraveRat();
             boolean spirit = model.sceneEnemyIsLostSpirit();
-            Bitmap enemySheet = spirit ? lostSpirit : (rat ? graveRat : (bones ? restlessBones : (bandit ? raggedBandit : (scarecrow ? runawayScarecrow : (slime ? greenSlime : (boss ? goblinBoss : goblin))))));
+            boolean acolyte = model.sceneEnemyIsChapelAcolyte();
+            boolean fallenPriorBoss = model.sceneEnemyIsFallenPrior();
+            Bitmap enemySheet = fallenPriorBoss ? fallenPrior : (acolyte ? chapelAcolyte : (spirit ? lostSpirit : (rat ? graveRat : (bones ? restlessBones : (bandit ? raggedBandit : (scarecrow ? runawayScarecrow : (slime ? greenSlime : (boss ? goblinBoss : goblin))))))));
             int enemySize = boss
-                    ? Math.min(dp(145), (int) (getHeight() * 0.88f))
+                    ? (fallenPriorBoss ? Math.min(dp(156), (int) (getHeight() * 0.92f)) : Math.min(dp(145), (int) (getHeight() * 0.88f)))
                     : slime
                     ? Math.min(dp(96), (int) (getHeight() * 0.58f))
                     : scarecrow
@@ -140,15 +156,30 @@ final class SceneView extends View {
                     ? Math.min(dp(104), (int) (getHeight() * 0.62f))
                     : spirit
                     ? Math.min(dp(124), (int) (getHeight() * 0.82f))
+                    : acolyte
+                    ? Math.min(dp(118), (int) (getHeight() * 0.78f))
                     : Math.min(dp(112), (int) (getHeight() * 0.75f));
             int enemyX = getWidth() - enemySize - dp(22);
-            int enemyBaselineOffset = boss ? BOSS_BASELINE_OFFSET_DP
-                    : (slime ? SLIME_BASELINE_OFFSET_DP
-                    : (scarecrow ? SCARECROW_BASELINE_OFFSET_DP
-                    : (bandit ? BANDIT_BASELINE_OFFSET_DP
-                    : (bones ? RESTLESS_BONES_BASELINE_OFFSET_DP
-                    : (rat ? GRAVE_RAT_BASELINE_OFFSET_DP
-                    : (spirit ? LOST_SPIRIT_BASELINE_OFFSET_DP : GOBLIN_BASELINE_OFFSET_DP))))));
+            int enemyBaselineOffset = GOBLIN_BASELINE_OFFSET_DP;
+            if (fallenPriorBoss) {
+                enemyBaselineOffset = FALLEN_PRIOR_BASELINE_OFFSET_DP;
+            } else if (boss) {
+                enemyBaselineOffset = BOSS_BASELINE_OFFSET_DP;
+            } else if (slime) {
+                enemyBaselineOffset = SLIME_BASELINE_OFFSET_DP;
+            } else if (scarecrow) {
+                enemyBaselineOffset = SCARECROW_BASELINE_OFFSET_DP;
+            } else if (bandit) {
+                enemyBaselineOffset = BANDIT_BASELINE_OFFSET_DP;
+            } else if (bones) {
+                enemyBaselineOffset = RESTLESS_BONES_BASELINE_OFFSET_DP;
+            } else if (rat) {
+                enemyBaselineOffset = GRAVE_RAT_BASELINE_OFFSET_DP;
+            } else if (spirit) {
+                enemyBaselineOffset = LOST_SPIRIT_BASELINE_OFFSET_DP;
+            } else if (acolyte) {
+                enemyBaselineOffset = CHAPEL_ACOLYTE_BASELINE_OFFSET_DP;
+            }
             int enemyY = ground - enemySize + dp(enemyBaselineOffset);
             drawFrame(canvas, enemySheet, frame, enemyX, enemyY, enemySize, enemySize);
             drawHpBar(canvas, enemyX, enemyY - dp(18), enemySize, Math.max(0, model.sceneEnemyHp()),
@@ -169,7 +200,9 @@ final class SceneView extends View {
     }
 
     private void drawBackground(Canvas canvas) {
-        Bitmap background = model.sceneUseForgottenGraveyard()
+        Bitmap background = model.sceneUseForgottenChapel()
+                ? forgottenChapelBackground
+                : model.sceneUseForgottenGraveyard()
                 ? forgottenGraveyardBackground
                 : (model.sceneUseGrassyFields() ? grassyFieldsBackground : caveBackground);
         if (background == null) {

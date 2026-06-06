@@ -41,6 +41,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private static final int AREA_ENEMY_GREEN_SLIME = 0;
     private static final int AREA_ENEMY_RUNAWAY_SCARECROW = 1;
     private static final int AREA_ENEMY_RAGGED_BANDIT = 2;
+    private static final int DUNGEON_GOBLIN_CAVE = 0;
+    private static final int DUNGEON_FORGOTTEN_CHAPEL = 1;
     private static final int TOWN_HOME = 0;
     private static final int TOWN_MERCHANT = 1;
     private static final int TOWN_ACTIVITY = 2;
@@ -163,6 +165,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int mainTab = TAB_FIGHT;
     private int fightScreen = FIGHT_HUB;
     private int activityMode = MODE_NONE;
+    private int selectedDungeon = DUNGEON_GOBLIN_CAVE;
     private int selectedArea = AREA_GRASSY_FIELDS;
     private int selectedAreaEnemy = AREA_ENEMY_GREEN_SLIME;
     private int expandedAreaLootEnemy = -1;
@@ -537,11 +540,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void startDungeonRun() {
+        startDungeonRun(selectedDungeon);
+    }
+
+    private void startDungeonRun(int dungeon) {
         if (!hasStepPermission()) {
             requestStepPermission();
             return;
         }
 
+        selectedDungeon = dungeon;
         activityMode = MODE_DUNGEON;
         activeRun = true;
         chestReady = false;
@@ -554,9 +562,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         playerHp = maxPlayerHp();
         lastGameSteps = todaySteps;
         fightScreen = FIGHT_COMBAT;
-        lastReward = "Goblin Cave I started. Steps now power combat.";
-        setRewardMessage("Rewards", "Defeat the Goblin Chief to earn a chest.");
-        addEvent("Entered Goblin Cave I. A Cave Goblin appears.");
+        lastReward = dungeonName() + " started. Steps now power combat.";
+        setRewardMessage("Rewards", "Defeat " + dungeonBossName() + " to earn a chest.");
+        addEvent("Entered " + dungeonName() + ". " + enemyName() + " appears.");
         saveState();
         updateViews();
         startListeningIfReady();
@@ -689,18 +697,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             chestReady = true;
             phase = PHASE_COMPLETE;
             autoChestCharge = 0;
-            lastReward = "The Goblin Chief is defeated. The chest opens automatically after 10 more steps.";
+            lastReward = "The " + dungeonBossName() + " is defeated. The chest opens automatically after 10 more steps.";
             setRewardMessage("Chest found", "Walk 10 steps to open the boss chest.");
-            addEvent("Goblin Chief defeated. Chest found.");
+            addEvent(dungeonBossName() + " defeated. Chest found.");
             return;
         }
 
+        String defeatedName = enemyName();
         encounterIndex += 1;
         phase = PHASE_COMBAT;
         enemyHp = enemyMaxHp(isBossFight());
         attackCharge = 0;
         enemyAttackCharge = 0;
-        addEvent(isBossFight() ? "The Goblin Chief enters the fight." : "Cave Goblin defeated. Another appears.");
+        addEvent(isBossFight() ? "The " + dungeonBossName() + " enters the fight." : defeatedName + " defeated. Another appears.");
     }
 
     private void openChest() {
@@ -709,14 +718,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         int oldEstimate = estimatedClearSteps();
-        Item foundItem = ItemCatalog.create(nextItemId++, randomGoblinCaveChestItemKey());
-
-        inventory.add(foundItem);
-        int goldReward = 18 + random.nextInt(8) + bonusGold();
+        Item foundItem = ItemCatalog.create(nextItemId++, randomDungeonChestItemKey());
+        int goldReward = dungeonGoldReward() + bonusGold();
         gold += goldReward;
         recordGoldEarned(goldReward);
         recordChestOpened();
         chestOpenedAt = System.currentTimeMillis();
+        inventory.add(foundItem);
         lastReward = foundItem.rarity + " - " + foundItem.name
                 + "\nAdded to inventory"
                 + "\n" + itemStatLine(foundItem)
@@ -736,7 +744,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         playerHp = maxPlayerHp();
         if (activeRun) {
             fightScreen = FIGHT_COMBAT;
-            addEvent("Goblin Cave I starts again.");
+            addEvent(dungeonName() + " starts again.");
         } else {
             activityMode = MODE_NONE;
             fightScreen = FIGHT_HUB;
@@ -776,6 +784,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         chestOpenedAt = state.chestOpenedAt;
         autoChestCharge = state.autoChestCharge;
         activityMode = state.activityMode;
+        selectedDungeon = state.selectedDungeon;
         selectedArea = state.selectedArea;
         selectedAreaEnemy = state.selectedAreaEnemy;
         if (selectedArea == AREA_DEEP_FOREST || (selectedArea == AREA_FORGOTTEN_GRAVEYARD && !forgottenGraveyardUnlocked)) {
@@ -849,6 +858,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.chestOpenedAt = chestOpenedAt;
         state.autoChestCharge = autoChestCharge;
         state.activityMode = activityMode;
+        state.selectedDungeon = selectedDungeon;
         state.selectedArea = selectedArea;
         state.selectedAreaEnemy = selectedAreaEnemy;
         state.mainTab = mainTab;
@@ -927,6 +937,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         activeRun = false;
         chestReady = false;
         activityMode = MODE_NONE;
+        selectedDungeon = DUNGEON_GOBLIN_CAVE;
         selectedArea = AREA_GRASSY_FIELDS;
         selectedAreaEnemy = AREA_ENEMY_GREEN_SLIME;
         mainTab = TAB_FIGHT;
@@ -1063,7 +1074,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return areaName();
         }
         if (activityMode == MODE_DUNGEON || chestReady) {
-            return "Goblin Cave I";
+            return dungeonName();
         }
         return "Fight";
     }
@@ -1076,6 +1087,25 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "Forgotten Graveyard";
         }
         return "Grassy Fields";
+    }
+
+    private String dungeonName() {
+        return selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL ? "Forgotten Chapel" : "Goblin Cave I";
+    }
+
+    private String dungeonEnemyName() {
+        return selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL ? CombatSystem.chapelAcolyteName() : CombatSystem.enemyName(false);
+    }
+
+    private String dungeonBossName() {
+        return selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL ? CombatSystem.fallenPriorName() : CombatSystem.enemyName(true);
+    }
+
+    private int dungeonGoldReward() {
+        if (selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            return 35 + random.nextInt(14);
+        }
+        return 18 + random.nextInt(8);
     }
 
     private String activityStatus() {
@@ -1314,14 +1344,14 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private String progressText() {
         if (chestReady || phase == PHASE_COMPLETE) {
-            return "Goblin Chief defeated. Chest opens at " + Math.min(autoChestCharge, 10) + " / 10 steps.";
+            return dungeonBossName() + " defeated. Chest opens at " + Math.min(autoChestCharge, 10) + " / 10 steps.";
         }
         if (!activeRun) {
             if (fightScreen == FIGHT_AREA_ENEMY) {
                 return "Farm " + selectedAreaEnemyName() + " until you retreat.";
             }
             if (fightScreen == FIGHT_DUNGEONS) {
-                return "3 encounters - Boss: Goblin Chief - HP combat";
+                return "Choose a dungeon. Steps power encounters, bosses, and chests.";
             }
             return "Select an area or dungeon.";
         }
@@ -2133,27 +2163,43 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         dungeonsPanel.removeAllViews();
         dungeonsPanel.addView(sectionTitle("DUNGEONS"));
-        dungeonsPanel.addView(adventureCard(R.drawable.title_goblin_cave, "Goblin Cave I",
-                "Goblin Chief boss, chest rewards.", null));
+        dungeonsPanel.addView(areaBannerCard(R.drawable.title_goblin_cave, "Goblin Cave I",
+                "Goblin Chief boss, chest rewards.", null, null));
+        dungeonsPanel.addView(dungeonActionRow(DUNGEON_GOBLIN_CAVE));
 
-        LinearLayout buttons = new LinearLayout(this);
-        buttons.setOrientation(LinearLayout.HORIZONTAL);
-        Button startDungeon = actionButton("Start Dungeon", true);
-        startDungeon.setOnClickListener(v -> startDungeonRun());
-        buttons.addView(startDungeon, weightedWidth(1.0f));
-
-        Button lootButton = actionButton(dungeonLootVisible ? "Hide Info" : "Show Info", false);
-        lootButton.setOnClickListener(v -> {
-            dungeonLootVisible = !dungeonLootVisible;
-            updateDungeonsPanel();
-        });
-        buttons.addView(lootButton, weightedWidth(1.0f));
-        dungeonsPanel.addView(buttons, buttonLayoutParams());
-
-        if (dungeonLootVisible) {
+        if (dungeonLootVisible && selectedDungeon == DUNGEON_GOBLIN_CAVE) {
+            dungeonsPanel.addView(dungeonInfoPreview());
+        }
+        dungeonsPanel.addView(areaBannerCard(R.drawable.title_forgotten_chapel, "Forgotten Chapel",
+                "3 Chapel Acolytes and the Fallen Prior.", null, null));
+        dungeonsPanel.addView(dungeonActionRow(DUNGEON_FORGOTTEN_CHAPEL));
+        if (dungeonLootVisible && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
             dungeonsPanel.addView(dungeonInfoPreview());
         }
         dungeonsPanel.addView(backButton());
+    }
+
+    private LinearLayout dungeonActionRow(int dungeon) {
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        Button startDungeon = actionButton("Start Dungeon", true);
+        startDungeon.setOnClickListener(v -> startDungeonRun(dungeon));
+        buttons.addView(startDungeon, weightedWidth(1.0f));
+
+        boolean showingThisDungeon = dungeonLootVisible && selectedDungeon == dungeon;
+        Button lootButton = actionButton(showingThisDungeon ? "Hide Info" : "Show Info", false);
+        lootButton.setOnClickListener(v -> {
+            if (showingThisDungeon) {
+                dungeonLootVisible = false;
+            } else {
+                selectedDungeon = dungeon;
+                dungeonLootVisible = true;
+            }
+            updateDungeonsPanel();
+        });
+        buttons.addView(lootButton, weightedWidth(1.0f));
+        buttons.setLayoutParams(buttonLayoutParams());
+        return buttons;
     }
 
     private LinearLayout dungeonInfoPreview() {
@@ -2162,11 +2208,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.setPadding(dp(10), dp(9), dp(10), dp(9));
         panel.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(80, 58, 35)));
         panel.addView(text("Dungeon info", 14, Color.rgb(245, 224, 177), true));
-        panel.addView(detailRow("Enemies", "3 Goblins | Boss: Goblin Chief"));
+        panel.addView(detailRow("Enemies", selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL
+                ? "3 Chapel Acolytes | Boss: Fallen Prior"
+                : "3 Goblins | Boss: Goblin Chief"));
         panel.addView(detailRow("Estimated steps", estimatedClearSteps() + " with current gear"));
         panel.addView(detailRow("Chest", "Opens automatically 10 steps after the boss"));
-        panel.addView(text("Possible chest rewards", 14, Color.rgb(245, 224, 177), true));
-        panel.addView(lootPreviewRow(R.drawable.item_gold, "Gold: 18-25", "Currency"));
+        if (selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            panel.addView(text("Possible chest rewards", 14, Color.rgb(245, 224, 177), true));
+            panel.addView(lootPreviewRow(R.drawable.item_gold, "Gold: 35-48", "Currency"));
+        } else {
+            panel.addView(text("Possible chest rewards", 14, Color.rgb(245, 224, 177), true));
+            panel.addView(lootPreviewRow(R.drawable.item_gold, "Gold: 18-25", "Currency"));
+        }
         for (String key : dungeonChestLootKeys()) {
             Item item = ItemCatalog.create(0, key);
             if (item != null) {
@@ -2181,12 +2234,56 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private List<String> dungeonChestLootKeys() {
         ArrayList<String> keys = new ArrayList<>();
+        if (selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            keys.add(ItemCatalog.GRAVEKEEPER_BLADE);
+            keys.add(ItemCatalog.GRAVEKEEPER_VEST);
+            keys.add(ItemCatalog.GRAVEKEEPER_TOKEN);
+            keys.add(ItemCatalog.MOONLIT_WARDEN_SABER);
+            keys.add(ItemCatalog.MOONLIT_WARDEN_MAIL);
+            keys.add(ItemCatalog.MOONLIT_WARDEN_LOCKET);
+            keys.add(ItemCatalog.CHAPEL_BELL_BOOTS);
+            keys.add(ItemCatalog.FALLEN_PRIOR_RELIC);
+            return keys;
+        }
         keys.add(ItemCatalog.IRON_SWORD);
         keys.add(ItemCatalog.CHIPPED_GOBLIN_AXE);
         keys.add(ItemCatalog.GOBLIN_TOOTH_CHARM);
         keys.add(ItemCatalog.GOBLIN_SCOUT_BOOTS);
         keys.add(ItemCatalog.DEEP_CAVE_ARMOR);
         return keys;
+    }
+
+    private String randomDungeonChestItemKey() {
+        if (selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            return randomForgottenChapelChestItemKey();
+        }
+        return randomGoblinCaveChestItemKey();
+    }
+
+    private String randomForgottenChapelChestItemKey() {
+        int roll = random.nextInt(100);
+        if (roll < 15) {
+            return ItemCatalog.GRAVEKEEPER_BLADE;
+        }
+        if (roll < 30) {
+            return ItemCatalog.GRAVEKEEPER_VEST;
+        }
+        if (roll < 45) {
+            return ItemCatalog.GRAVEKEEPER_TOKEN;
+        }
+        if (roll < 57) {
+            return ItemCatalog.MOONLIT_WARDEN_SABER;
+        }
+        if (roll < 69) {
+            return ItemCatalog.MOONLIT_WARDEN_MAIL;
+        }
+        if (roll < 79) {
+            return ItemCatalog.MOONLIT_WARDEN_LOCKET;
+        }
+        if (roll < 90) {
+            return ItemCatalog.CHAPEL_BELL_BOOTS;
+        }
+        return ItemCatalog.FALLEN_PRIOR_RELIC;
     }
 
     private String randomGoblinCaveChestItemKey() {
@@ -3264,6 +3361,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int enemyMaxHp(boolean boss) {
+        if (activityMode == MODE_DUNGEON && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            return boss ? CombatSystem.fallenPriorMaxHp() : CombatSystem.chapelAcolyteMaxHp();
+        }
         if (currentEnemyIsGreenSlime() && !boss) {
             return CombatSystem.greenSlimeMaxHp();
         }
@@ -3286,6 +3386,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private String enemyName() {
+        if (activityMode == MODE_DUNGEON && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            return isBossFight() ? CombatSystem.fallenPriorName() : CombatSystem.chapelAcolyteName();
+        }
         if (currentEnemyIsLostSpirit()) {
             return CombatSystem.lostSpiritName();
         }
@@ -3308,6 +3411,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int enemyMaxHit() {
+        if (activityMode == MODE_DUNGEON && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            return isBossFight() ? CombatSystem.fallenPriorMaxHit() : CombatSystem.chapelAcolyteMaxHit();
+        }
         if (currentEnemyIsGreenSlime()) {
             return CombatSystem.greenSlimeMaxHit();
         }
@@ -3330,6 +3436,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int enemyMinHit() {
+        if (activityMode == MODE_DUNGEON && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            return isBossFight() ? 11 : 7;
+        }
         if (currentEnemyIsLostSpirit()) {
             return 8;
         }
@@ -3349,6 +3458,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int enemyAttackInterval() {
+        if (activityMode == MODE_DUNGEON && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
+            return isBossFight() ? CombatSystem.fallenPriorAttackInterval() : CombatSystem.chapelAcolyteAttackInterval();
+        }
         if (currentEnemyIsGreenSlime()) {
             return CombatSystem.greenSlimeAttackInterval();
         }
@@ -3368,6 +3480,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return CombatSystem.lostSpiritAttackInterval();
         }
         return CombatSystem.enemyAttackInterval(isBossFight());
+    }
+
+    private boolean currentEnemyIsChapelAcolyte() {
+        return activityMode == MODE_DUNGEON
+                && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL
+                && !isBossFight();
+    }
+
+    private boolean currentEnemyIsFallenPrior() {
+        return activityMode == MODE_DUNGEON
+                && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL
+                && isBossFight();
     }
 
     private boolean currentEnemyIsGreenSlime() {
@@ -3816,7 +3940,19 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private int estimatedClearSteps() {
-        return CombatSystem.estimatedClearSteps(attackInterval(), Math.max(1, (attackMinDamage() + attackMaxDamage()) / 2));
+        int averageDamage = Math.max(1, (attackMinDamage() + attackMaxDamage()) / 2);
+        int regularHp = selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL
+                ? CombatSystem.chapelAcolyteMaxHp()
+                : CombatSystem.enemyMaxHp(false);
+        int bossHp = selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL
+                ? CombatSystem.fallenPriorMaxHp()
+                : CombatSystem.enemyMaxHp(true);
+        return (ENCOUNTERS * roundsForEstimate(regularHp, averageDamage)
+                + roundsForEstimate(bossHp, averageDamage)) * attackInterval();
+    }
+
+    private int roundsForEstimate(int hp, int averageDamage) {
+        return (hp + averageDamage - 1) / averageDamage;
     }
 
     private String difficultyLabel() {
@@ -4110,6 +4246,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     @Override
+    public boolean sceneEnemyIsChapelAcolyte() {
+        return currentEnemyIsChapelAcolyte();
+    }
+
+    @Override
+    public boolean sceneEnemyIsFallenPrior() {
+        return currentEnemyIsFallenPrior();
+    }
+
+    @Override
     public boolean sceneChestReady() {
         return chestReady;
     }
@@ -4127,5 +4273,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     @Override
     public boolean sceneUseForgottenGraveyard() {
         return activityMode == MODE_AREA && selectedArea == AREA_FORGOTTEN_GRAVEYARD;
+    }
+
+    @Override
+    public boolean sceneUseForgottenChapel() {
+        return activityMode == MODE_DUNGEON && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL;
     }
 }

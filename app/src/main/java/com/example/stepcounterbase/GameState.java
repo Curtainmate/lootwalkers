@@ -41,6 +41,7 @@ final class GameState {
     int mainTab = 0;
     int fightScreen = 0;
     int activityMode = 0;
+    int selectedDungeon = 0;
     int selectedArea = 1;
     int selectedAreaEnemy = 0;
     int autoChestCharge = 0;
