@@ -27,6 +27,14 @@ final class CombatSystem {
         return boss ? 220 : 75;
     }
 
+    static int chapelAcolyteMaxHp() {
+        return 135;
+    }
+
+    static int fallenPriorMaxHp() {
+        return 420;
+    }
+
     static int greenSlimeMaxHp() {
         return 40;
     }
@@ -53,6 +61,14 @@ final class CombatSystem {
 
     static String enemyName(boolean boss) {
         return boss ? "Goblin Chief" : "Cave Goblin";
+    }
+
+    static String chapelAcolyteName() {
+        return "Chapel Acolyte";
+    }
+
+    static String fallenPriorName() {
+        return "Fallen Prior";
     }
 
     static String greenSlimeName() {
@@ -83,6 +99,14 @@ final class CombatSystem {
         return boss ? 18 : 10;
     }
 
+    static int chapelAcolyteMaxHit() {
+        return 10;
+    }
+
+    static int fallenPriorMaxHit() {
+        return 16;
+    }
+
     static int greenSlimeMaxHit() {
         return 6;
     }
@@ -109,6 +133,14 @@ final class CombatSystem {
 
     static int enemyAttackInterval(boolean boss) {
         return boss ? 90 : 115;
+    }
+
+    static int chapelAcolyteAttackInterval() {
+        return 95;
+    }
+
+    static int fallenPriorAttackInterval() {
+        return 100;
     }
 
     static int greenSlimeAttackInterval() {

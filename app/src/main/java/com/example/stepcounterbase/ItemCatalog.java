@@ -33,6 +33,8 @@ final class ItemCatalog {
     static final String MOONLIT_WARDEN_MAIL = "moonlit_warden_mail";
     static final String MOONLIT_WARDEN_BOOTS = "moonlit_warden_boots";
     static final String MOONLIT_WARDEN_LOCKET = "moonlit_warden_locket";
+    static final String CHAPEL_BELL_BOOTS = "chapel_bell_boots";
+    static final String FALLEN_PRIOR_RELIC = "fallen_prior_relic";
     static final String GREEN_GOO = "green_goo";
     static final String NAILS = "nails";
     static final String STOLEN_TRINKET = "stolen_trinket";
@@ -119,6 +121,13 @@ final class ItemCatalog {
         if (MOONLIT_WARDEN_LOCKET.equals(key)) {
             return charm(id, key, "Moonlit Warden Locket", "Rare", 9, 4, 2, 0, 54, R.drawable.moonlit_warden_locket);
         }
+        if (CHAPEL_BELL_BOOTS.equals(key)) {
+            return boots(id, key, "Chapel Bell Boots", "Rare", 34, 40, 6, 75, R.drawable.chapel_bell_boots);
+        }
+        if (FALLEN_PRIOR_RELIC.equals(key)) {
+            return new Item(id, key, SLOT_CHARM, "Fallen Prior's Relic", "Epic",
+                    0, 0, 0, 0, 12, 10, 3, 6, 0, 120, R.drawable.fallen_prior_relic);
+        }
         if (GREEN_GOO.equals(key)) {
             return loot(id, key, "Green Goo", "Common", 3, R.drawable.item_green_goo);
         }
@@ -197,6 +206,12 @@ final class ItemCatalog {
         }
         if ("Moonlit Warden Locket".equals(name)) {
             return create(id, MOONLIT_WARDEN_LOCKET);
+        }
+        if ("Chapel Bell Boots".equals(name)) {
+            return create(id, CHAPEL_BELL_BOOTS);
+        }
+        if ("Fallen Prior's Relic".equals(name)) {
+            return create(id, FALLEN_PRIOR_RELIC);
         }
         if ("Green Goo".equals(name)) {
             return create(id, GREEN_GOO);
