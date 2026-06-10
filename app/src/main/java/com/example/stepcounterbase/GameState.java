@@ -15,6 +15,7 @@ final class GameState {
     int activityTab = 0;
     boolean autoEatUnlocked = false;
     boolean forgottenGraveyardUnlocked = false;
+    boolean forgottenChapelUnlocked = false;
     int merchantTab = 0;
 
     boolean activeRun = false;

@@ -44,6 +44,7 @@ final class ItemCatalog {
     static final String BREAD = "bread";
     static final String AUTO_EAT_MANUAL = "auto_eat_manual";
     static final String FORGOTTEN_GRAVEYARD_MAP = "forgotten_graveyard_map";
+    static final String FORGOTTEN_CHAPEL_MAP = "forgotten_chapel_map";
 
     private ItemCatalog() {
     }
@@ -153,7 +154,10 @@ final class ItemCatalog {
             return unlock(id, key, "Auto-eat Manual", "Uncommon", 0, R.drawable.item_auto_eat_manual);
         }
         if (FORGOTTEN_GRAVEYARD_MAP.equals(key)) {
-            return unlock(id, key, "Forgotten Graveyard Map", "Uncommon", 0, R.drawable.map_forgotten_graveyard);
+            return unlock(id, key, "Old Graveyard Map", "Uncommon", 0, R.drawable.map_forgotten_graveyard);
+        }
+        if (FORGOTTEN_CHAPEL_MAP.equals(key)) {
+            return unlock(id, key, "Forgotten Chapel Map", "Rare", 0, R.drawable.map_forgotten_chapel);
         }
         return null;
     }
@@ -237,8 +241,11 @@ final class ItemCatalog {
         if ("Auto-eat Manual".equals(name)) {
             return create(id, AUTO_EAT_MANUAL);
         }
-        if ("Forgotten Graveyard Map".equals(name)) {
+        if ("Old Graveyard Map".equals(name) || "Forgotten Graveyard Map".equals(name)) {
             return create(id, FORGOTTEN_GRAVEYARD_MAP);
+        }
+        if ("Forgotten Chapel Map".equals(name)) {
+            return create(id, FORGOTTEN_CHAPEL_MAP);
         }
         return null;
     }

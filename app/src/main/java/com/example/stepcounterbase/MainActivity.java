@@ -58,6 +58,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private static final int BREAD_BUY_PRICE = 8;
     private static final int AUTO_EAT_MANUAL_PRICE = 75;
     private static final int FORGOTTEN_GRAVEYARD_MAP_PRICE = 120;
+    private static final int FORGOTTEN_CHAPEL_MAP_PRICE = 300;
     private final Random random = new Random();
 
     private SensorManager sensorManager;
@@ -138,6 +139,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private int activityTab = ACTIVITY_TODAY;
     private boolean autoEatUnlocked = false;
     private boolean forgottenGraveyardUnlocked = false;
+    private boolean forgottenChapelUnlocked = false;
     private int merchantTab = MERCHANT_SELL;
     private String todayKey;
 
@@ -766,6 +768,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         activityTab = state.activityTab;
         autoEatUnlocked = state.autoEatUnlocked;
         forgottenGraveyardUnlocked = state.forgottenGraveyardUnlocked;
+        forgottenChapelUnlocked = state.forgottenChapelUnlocked;
         merchantTab = state.merchantTab;
         activeRun = state.activeRun;
         chestReady = state.chestReady;
@@ -841,6 +844,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.activityTab = activityTab;
         state.autoEatUnlocked = autoEatUnlocked;
         state.forgottenGraveyardUnlocked = forgottenGraveyardUnlocked;
+        state.forgottenChapelUnlocked = forgottenChapelUnlocked;
         state.merchantTab = merchantTab;
         state.activeRun = activeRun;
         state.chestReady = chestReady;
@@ -933,6 +937,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         activityTab = ACTIVITY_TODAY;
         autoEatUnlocked = false;
         forgottenGraveyardUnlocked = false;
+        forgottenChapelUnlocked = false;
         merchantTab = MERCHANT_SELL;
         activeRun = false;
         chestReady = false;
@@ -1084,7 +1089,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "Grassy Fields";
         }
         if (selectedArea == AREA_FORGOTTEN_GRAVEYARD) {
-            return "Forgotten Graveyard";
+            return "Old Graveyard";
         }
         return "Grassy Fields";
     }
@@ -1899,20 +1904,31 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void showLockedGraveyardDialog() {
+        showLockedMapDialog("Area Locked", R.drawable.map_forgotten_graveyard,
+                "You need the Old Graveyard Map to enter this area.\n\nThe Merchant sells it for "
+                        + FORGOTTEN_GRAVEYARD_MAP_PRICE + "g.");
+    }
+
+    private void showLockedChapelDialog() {
+        showLockedMapDialog("Dungeon Locked", R.drawable.map_forgotten_chapel,
+                "You need the Forgotten Chapel Map to enter this dungeon.\n\nThe Merchant sells it for "
+                        + FORGOTTEN_CHAPEL_MAP_PRICE + "g.");
+    }
+
+    private void showLockedMapDialog(String title, int iconRes, String messageText) {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(18), dp(14), dp(18), dp(12));
 
         ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.map_forgotten_graveyard);
+        icon.setImageResource(iconRes);
         icon.setAdjustViewBounds(true);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
         LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(86), dp(86));
         iconParams.gravity = Gravity.CENTER_HORIZONTAL;
         panel.addView(icon, iconParams);
 
-        TextView message = text("You need the Forgotten Graveyard Map to enter this area.\n\nThe Merchant sells it for "
-                + FORGOTTEN_GRAVEYARD_MAP_PRICE + "g.", 15, Color.rgb(226, 205, 163), false);
+        TextView message = text(messageText, 15, Color.rgb(226, 205, 163), false);
         message.setGravity(Gravity.CENTER);
         message.setPadding(0, dp(10), 0, dp(12));
         panel.addView(message);
@@ -1926,7 +1942,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.addView(actions);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Area Locked")
+                .setTitle(title)
                 .setView(panel)
                 .create();
         back.setOnClickListener(v -> dialog.dismiss());
@@ -2143,7 +2159,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         areasPanel.addView(areaBannerCard(R.drawable.title_grassy_fields, "Grassy Fields",
                 "Beginner fields with slimes, scarecrows, and bandits.", null,
                 v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
-        areasPanel.addView(areaBannerCard(R.drawable.title_forgotten_graveyard, "Forgotten Graveyard",
+        areasPanel.addView(areaBannerCard(R.drawable.title_forgotten_graveyard, "Old Graveyard",
                 forgottenGraveyardUnlocked ? "Undead enemies and Moonlit Warden gear." : "Buy the map from the Merchant.",
                 forgottenGraveyardUnlocked ? null : "LOCKED",
                 v -> {
@@ -2171,7 +2187,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             dungeonsPanel.addView(dungeonInfoPreview());
         }
         dungeonsPanel.addView(areaBannerCard(R.drawable.title_forgotten_chapel, "Forgotten Chapel",
-                "3 Chapel Acolytes and the Fallen Prior.", null, null));
+                forgottenChapelUnlocked ? "3 Chapel Acolytes and the Fallen Prior." : "Buy the map from the Merchant.",
+                forgottenChapelUnlocked ? null : "LOCKED", null));
         dungeonsPanel.addView(dungeonActionRow(DUNGEON_FORGOTTEN_CHAPEL));
         if (dungeonLootVisible && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL) {
             dungeonsPanel.addView(dungeonInfoPreview());
@@ -2183,7 +2200,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         LinearLayout buttons = new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         Button startDungeon = actionButton("Start Dungeon", true);
-        startDungeon.setOnClickListener(v -> startDungeonRun(dungeon));
+        startDungeon.setOnClickListener(v -> {
+            if (dungeon == DUNGEON_FORGOTTEN_CHAPEL && !forgottenChapelUnlocked) {
+                showLockedChapelDialog();
+            } else {
+                startDungeonRun(dungeon);
+            }
+        });
         buttons.addView(startDungeon, weightedWidth(1.0f));
 
         boolean showingThisDungeon = dungeonLootVisible && selectedDungeon == dungeon;
@@ -2778,9 +2801,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         list.addView(merchantBuyRow(
                 ItemCatalog.create(0, ItemCatalog.FORGOTTEN_GRAVEYARD_MAP),
                 FORGOTTEN_GRAVEYARD_MAP_PRICE,
-                "Unlocks Forgotten Graveyard",
+                "Unlocks Old Graveyard",
                 forgottenGraveyardUnlocked ? "Unlocked" : "Area map",
                 v -> buyForgottenGraveyardMap()
+        ));
+        list.addView(merchantBuyRow(
+                ItemCatalog.create(0, ItemCatalog.FORGOTTEN_CHAPEL_MAP),
+                FORGOTTEN_CHAPEL_MAP_PRICE,
+                "Unlocks Forgotten Chapel",
+                forgottenChapelUnlocked ? "Unlocked" : "Dungeon map",
+                v -> buyForgottenChapelMap()
         ));
         return list;
     }
@@ -2800,6 +2830,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (ItemCatalog.FORGOTTEN_GRAVEYARD_MAP.equals(item.key) && forgottenGraveyardUnlocked) {
             return "Owned";
         }
+        if (ItemCatalog.FORGOTTEN_CHAPEL_MAP.equals(item.key) && forgottenChapelUnlocked) {
+            return "Owned";
+        }
         return gold >= price ? "Buy" : price + "g";
     }
 
@@ -2811,6 +2844,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return false;
         }
         if (ItemCatalog.FORGOTTEN_GRAVEYARD_MAP.equals(item.key) && forgottenGraveyardUnlocked) {
+            return false;
+        }
+        if (ItemCatalog.FORGOTTEN_CHAPEL_MAP.equals(item.key) && forgottenChapelUnlocked) {
             return false;
         }
         return gold >= price;
@@ -2988,7 +3024,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
         gold -= FORGOTTEN_GRAVEYARD_MAP_PRICE;
         forgottenGraveyardUnlocked = true;
-        addEvent("Forgotten Graveyard unlocked.");
+        addEvent("Old Graveyard unlocked.");
+        saveState();
+        updateViews();
+    }
+
+    private void buyForgottenChapelMap() {
+        if (forgottenChapelUnlocked || gold < FORGOTTEN_CHAPEL_MAP_PRICE) {
+            return;
+        }
+        gold -= FORGOTTEN_CHAPEL_MAP_PRICE;
+        forgottenChapelUnlocked = true;
+        addEvent("Forgotten Chapel unlocked.");
         saveState();
         updateViews();
     }
