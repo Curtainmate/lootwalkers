@@ -27,6 +27,7 @@ final class SaveStore {
     private static final String MERCHANT_TAB_KEY = "merchant_tab";
     private static final String ACTIVE_KEY = "active_run";
     private static final String SHOW_DEV_TOOLS_KEY = "show_dev_tools";
+    private static final String BETA_WELCOME_SEEN_KEY = "beta_welcome_seen";
     private static final String PHASE_KEY = "phase";
     private static final String ENCOUNTER_KEY = "encounter";
     private static final String TRAVEL_LEFT_KEY = "travel_left";
@@ -84,6 +85,7 @@ final class SaveStore {
         state.activeRun = prefs.getBoolean(ACTIVE_KEY, false);
         state.chestReady = prefs.getBoolean(CHEST_READY_KEY, false);
         state.showDevTools = prefs.getBoolean(SHOW_DEV_TOOLS_KEY, false);
+        state.betaWelcomeSeen = prefs.getBoolean(BETA_WELCOME_SEEN_KEY, false);
         state.activityTab = prefs.getInt(ACTIVITY_TAB_KEY, 0);
         state.autoEatUnlocked = prefs.getBoolean(AUTO_EAT_UNLOCKED_KEY, false);
         state.forgottenGraveyardUnlocked = prefs.getBoolean(FORGOTTEN_GRAVEYARD_UNLOCKED_KEY, false);
@@ -153,6 +155,7 @@ final class SaveStore {
                 .putBoolean(ACTIVE_KEY, state.activeRun)
                 .putBoolean(CHEST_READY_KEY, state.chestReady)
                 .putBoolean(SHOW_DEV_TOOLS_KEY, state.showDevTools)
+                .putBoolean(BETA_WELCOME_SEEN_KEY, state.betaWelcomeSeen)
                 .putInt(PHASE_KEY, state.phase)
                 .putInt(ENCOUNTER_KEY, state.encounterIndex)
                 .putInt(TRAVEL_LEFT_KEY, state.travelLeft)

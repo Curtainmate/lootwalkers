@@ -34,6 +34,7 @@ import java.util.Random;
 import static com.example.stepcounterbase.GameRules.*;
 
 public class MainActivity extends Activity implements SensorEventListener, SceneView.Model {
+    private static final String APP_VERSION_LABEL = "Lootwalkers Beta 0.7.115";
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
     private static final int AREA_DEEP_FOREST = 0;
     private static final int AREA_GRASSY_FIELDS = 1;
@@ -125,6 +126,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private Button combatLogToggleButton;
     private boolean dungeonLootVisible = false;
     private boolean showDevTools = false;
+    private boolean betaWelcomeSeen = false;
     private int townScreen = TOWN_HOME;
 
     private int baseline = -1;
@@ -200,6 +202,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         loadState();
         setContentView(buildLayout());
         updateViews();
+        maybeShowBetaWelcome();
     }
 
     @Override
@@ -467,7 +470,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         contentRoot.addView(permissionButton, buttonLayoutParams());
 
         resetButton = actionButton("Reset prototype", false);
-        resetButton.setOnClickListener(v -> resetPrototype());
+        resetButton.setOnClickListener(v -> confirmResetPrototype());
         contentRoot.addView(resetButton, buttonLayoutParams());
         testNextDayButton = actionButton("Simulate next day", false);
         testNextDayButton.setOnClickListener(v -> simulateNextDay());
@@ -773,6 +776,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         activeRun = state.activeRun;
         chestReady = state.chestReady;
         showDevTools = state.showDevTools;
+        betaWelcomeSeen = state.betaWelcomeSeen;
         phase = state.phase;
         encounterIndex = state.encounterIndex;
         travelLeft = state.travelLeft;
@@ -849,6 +853,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.activeRun = activeRun;
         state.chestReady = chestReady;
         state.showDevTools = showDevTools;
+        state.betaWelcomeSeen = betaWelcomeSeen;
         state.phase = phase;
         state.encounterIndex = encounterIndex;
         state.travelLeft = travelLeft;
@@ -924,6 +929,29 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         updateViews();
     }
 
+    private void confirmResetPrototype() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+        panel.addView(dialogTitle("Reset beta save?"));
+        panel.addView(text("This will erase your local beta save and return Lootwalkers to the starting state. Continue?",
+                15, Color.rgb(226, 205, 163), false));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(panel)
+                .setNegativeButton("Back", null)
+                .setPositiveButton("Reset", (d, which) -> resetPrototype())
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.rgb(245, 224, 177));
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(232, 98, 73));
+        });
+        dialog.show();
+    }
+
     private void resetPrototype() {
         baseline = -1;
         todaySteps = 0;
@@ -972,15 +1000,41 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         updateViews();
     }
 
+    private void maybeShowBetaWelcome() {
+        if (betaWelcomeSeen) {
+            return;
+        }
+        betaWelcomeSeen = true;
+        saveState();
+        View root = getWindow() == null ? null : getWindow().getDecorView();
+        if (root == null) {
+            showBetaInfoDialog(true);
+        } else {
+            root.post(() -> showBetaInfoDialog(true));
+        }
+    }
+
     private void showPreferencesDialog() {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+        panel.setPadding(dp(18), dp(12), dp(18), dp(8));
+
+        panel.addView(dialogTitle("Preferences"));
+        panel.addView(text(APP_VERSION_LABEL, 14, Color.rgb(192, 157, 100), true));
+
+        Button aboutButton = actionButton("About beta", false);
+        aboutButton.setOnClickListener(v -> showBetaInfoDialog(false));
+        LinearLayout.LayoutParams aboutParams = buttonLayoutParams();
+        aboutParams.setMargins(0, dp(10), 0, dp(8));
+        panel.addView(aboutButton, aboutParams);
+
+        panel.addView(text("Beta Tester Tools", 14, Color.rgb(192, 157, 100), true));
 
         CheckBox devToolsCheckbox = new CheckBox(this);
         devToolsCheckbox.setText("Show dev tools");
         devToolsCheckbox.setTextSize(16);
         devToolsCheckbox.setTextColor(Color.rgb(245, 224, 177));
+        devToolsCheckbox.setButtonTintList(android.content.res.ColorStateList.valueOf(Color.rgb(192, 157, 100)));
         devToolsCheckbox.setChecked(showDevTools);
         devToolsCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
             showDevTools = isChecked;
@@ -990,7 +1044,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.addView(devToolsCheckbox);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Preferences")
                 .setView(panel)
                 .setPositiveButton("Done", null)
                 .create();
@@ -1001,6 +1054,39 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(245, 224, 177));
         });
         dialog.show();
+    }
+
+    private void showBetaInfoDialog(boolean welcome) {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+
+        panel.addView(dialogTitle(welcome ? "Welcome to Lootwalkers" : "About Lootwalkers Beta"));
+        String body = "Walk to power combat. Fight enemies, find loot, sell spare items, buy maps, and unlock harder places.\n\n"
+                + "This is an early beta. Step tracking may vary by phone, especially when the app is closed.\n\n"
+                + "There is no account or cloud save yet. Progress is stored only on this phone.\n\n"
+                + "Feedback is welcome: confusing screens, odd balance, or step tracking problems are the most useful things to report.";
+        TextView bodyView = text(body, 15, Color.rgb(226, 205, 163), false);
+        bodyView.setLineSpacing(dp(2), 1.0f);
+        panel.addView(bodyView);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(panel)
+                .setPositiveButton(welcome ? "Start walking" : "Done", null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(245, 224, 177));
+        });
+        dialog.show();
+    }
+
+    private TextView dialogTitle(String title) {
+        TextView view = text(title, 22, Color.rgb(245, 224, 177), true);
+        view.setPadding(0, 0, 0, dp(12));
+        return view;
     }
 
     private LinearLayout topHudStatRow(int iconRes, TextView valueView) {
@@ -1070,7 +1156,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         } else if (chestReady) {
             systemView.setText("Dungeon clear. Walk 10 steps to open the chest.");
         } else {
-            systemView.setText("");
+            systemView.setText(APP_VERSION_LABEL);
         }
     }
 

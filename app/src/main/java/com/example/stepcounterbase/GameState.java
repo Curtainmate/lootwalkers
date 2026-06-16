@@ -21,6 +21,7 @@ final class GameState {
     boolean activeRun = false;
     boolean chestReady = false;
     boolean showDevTools = false;
+    boolean betaWelcomeSeen = false;
     int phase = 0;
     int encounterIndex = 0;
     int travelLeft = 0;
