@@ -10,6 +10,7 @@ import static com.example.stepcounterbase.GameRules.MODE_NONE;
 
 final class SaveStore {
     private static final String PREFS = "lootwalkers_prefs";
+    private static final String HERO_NAME_KEY = "hero_name";
     private static final String DATE_KEY = "date";
     private static final String BASELINE_KEY = "baseline";
     private static final String TODAY_STEPS_KEY = "today_steps";
@@ -28,6 +29,7 @@ final class SaveStore {
     private static final String ACTIVE_KEY = "active_run";
     private static final String SHOW_DEV_TOOLS_KEY = "show_dev_tools";
     private static final String BETA_WELCOME_SEEN_KEY = "beta_welcome_seen";
+    private static final String HERO_NAME_PROMPT_SEEN_KEY = "hero_name_prompt_seen";
     private static final String PHASE_KEY = "phase";
     private static final String ENCOUNTER_KEY = "encounter";
     private static final String TRAVEL_LEFT_KEY = "travel_left";
@@ -68,6 +70,7 @@ final class SaveStore {
     GameState load(String todayKey, String defaultLastReward, String defaultEventLog) {
         GameState state = new GameState();
         state.todayKey = todayKey;
+        state.heroName = prefs.getString(HERO_NAME_KEY, "Arin");
 
         String storedDate = prefs.getString(DATE_KEY, "");
         if (!todayKey.equals(storedDate)) {
@@ -86,6 +89,7 @@ final class SaveStore {
         state.chestReady = prefs.getBoolean(CHEST_READY_KEY, false);
         state.showDevTools = prefs.getBoolean(SHOW_DEV_TOOLS_KEY, false);
         state.betaWelcomeSeen = prefs.getBoolean(BETA_WELCOME_SEEN_KEY, false);
+        state.heroNamePromptSeen = prefs.getBoolean(HERO_NAME_PROMPT_SEEN_KEY, false);
         state.activityTab = prefs.getInt(ACTIVITY_TAB_KEY, 0);
         state.autoEatUnlocked = prefs.getBoolean(AUTO_EAT_UNLOCKED_KEY, false);
         state.forgottenGraveyardUnlocked = prefs.getBoolean(FORGOTTEN_GRAVEYARD_UNLOCKED_KEY, false);
@@ -138,6 +142,7 @@ final class SaveStore {
 
     void save(GameState state) {
         prefs.edit()
+                .putString(HERO_NAME_KEY, state.heroName)
                 .putString(DATE_KEY, state.todayKey)
                 .putInt(BASELINE_KEY, state.baseline)
                 .putInt(TODAY_STEPS_KEY, state.todaySteps)
@@ -156,6 +161,7 @@ final class SaveStore {
                 .putBoolean(CHEST_READY_KEY, state.chestReady)
                 .putBoolean(SHOW_DEV_TOOLS_KEY, state.showDevTools)
                 .putBoolean(BETA_WELCOME_SEEN_KEY, state.betaWelcomeSeen)
+                .putBoolean(HERO_NAME_PROMPT_SEEN_KEY, state.heroNamePromptSeen)
                 .putInt(PHASE_KEY, state.phase)
                 .putInt(ENCOUNTER_KEY, state.encounterIndex)
                 .putInt(TRAVEL_LEFT_KEY, state.travelLeft)

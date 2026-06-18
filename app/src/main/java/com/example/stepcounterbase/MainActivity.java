@@ -12,10 +12,12 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -67,6 +69,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private SaveStore saveStore;
     private UiFactory ui;
 
+    private TextView heroNameView;
     private TextView dateView;
     private TextView todayStepsView;
     private TextView goldView;
@@ -127,8 +130,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private boolean dungeonLootVisible = false;
     private boolean showDevTools = false;
     private boolean betaWelcomeSeen = false;
+    private boolean heroNamePromptSeen = false;
     private int townScreen = TOWN_HOME;
 
+    private String heroName = "Arin";
     private int baseline = -1;
     private int todaySteps = 0;
     private int debugDayOffset = 0;
@@ -292,6 +297,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         portraitView.setPadding(dp(2), dp(2), dp(2), dp(2));
         portraitView.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(126, 82, 37)));
         portraitFrame.addView(portraitView, new FrameLayout.LayoutParams(dp(58), dp(58)));
+        portraitFrame.setClickable(true);
+        portraitFrame.setOnClickListener(v -> showRenameHeroDialog(false));
 
         LinearLayout.LayoutParams portraitParams = new LinearLayout.LayoutParams(dp(58), dp(58));
         portraitParams.setMargins(0, 0, dp(8), 0);
@@ -299,8 +306,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         LinearLayout heroHud = new LinearLayout(this);
         heroHud.setOrientation(LinearLayout.VERTICAL);
-        TextView nameView = text("Arin", 23, Color.rgb(245, 224, 177), true);
-        heroHud.addView(nameView);
+        heroHud.setClickable(true);
+        heroHud.setOnClickListener(v -> showRenameHeroDialog(false));
+        heroNameView = text(heroName, 23, Color.rgb(245, 224, 177), true);
+        heroNameView.setSingleLine(true);
+        heroHud.addView(heroNameView);
         dateView = text("Lv. 1", 15, Color.rgb(192, 157, 100), true);
         heroHud.addView(dateView);
         topHud.addView(heroHud, weightedWidth(0.9f));
@@ -633,7 +643,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             phase = PHASE_EXHAUSTED;
             attackCharge = 0;
             enemyAttackCharge = 0;
-            addEvent("Arin is Exhausted. Walk to recover.");
+            addEvent(heroName + " is Exhausted. Walk to recover.");
         }
     }
 
@@ -760,6 +770,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void loadState() {
         GameState state = saveStore.load(todayKey, lastReward, eventLog);
+        heroName = sanitizeHeroName(state.heroName);
         baseline = state.baseline;
         todaySteps = state.todaySteps;
         debugStepOffset = state.debugStepOffset;
@@ -777,6 +788,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         chestReady = state.chestReady;
         showDevTools = state.showDevTools;
         betaWelcomeSeen = state.betaWelcomeSeen;
+        heroNamePromptSeen = state.heroNamePromptSeen;
         phase = state.phase;
         encounterIndex = state.encounterIndex;
         travelLeft = state.travelLeft;
@@ -836,6 +848,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private void saveState() {
         ensureCurrentDay();
         GameState state = new GameState();
+        state.heroName = heroName;
         state.todayKey = todayKey;
         state.baseline = baseline;
         state.todaySteps = todaySteps;
@@ -854,6 +867,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.chestReady = chestReady;
         state.showDevTools = showDevTools;
         state.betaWelcomeSeen = betaWelcomeSeen;
+        state.heroNamePromptSeen = heroNamePromptSeen;
         state.phase = phase;
         state.encounterIndex = encounterIndex;
         state.travelLeft = travelLeft;
@@ -1002,16 +1016,26 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void maybeShowBetaWelcome() {
         if (betaWelcomeSeen) {
+            maybeShowHeroNamePrompt();
             return;
         }
         betaWelcomeSeen = true;
         saveState();
         View root = getWindow() == null ? null : getWindow().getDecorView();
         if (root == null) {
-            showBetaInfoDialog(true);
+            showBetaInfoDialog(true, this::maybeShowHeroNamePrompt);
         } else {
-            root.post(() -> showBetaInfoDialog(true));
+            root.post(() -> showBetaInfoDialog(true, this::maybeShowHeroNamePrompt));
         }
+    }
+
+    private void maybeShowHeroNamePrompt() {
+        if (heroNamePromptSeen) {
+            return;
+        }
+        heroNamePromptSeen = true;
+        saveState();
+        showRenameHeroDialog(true);
     }
 
     private void showPreferencesDialog() {
@@ -1023,7 +1047,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.addView(text(APP_VERSION_LABEL, 14, Color.rgb(192, 157, 100), true));
 
         Button aboutButton = actionButton("About beta", false);
-        aboutButton.setOnClickListener(v -> showBetaInfoDialog(false));
+        aboutButton.setOnClickListener(v -> showBetaInfoDialog(false, null));
         LinearLayout.LayoutParams aboutParams = buttonLayoutParams();
         aboutParams.setMargins(0, dp(10), 0, dp(8));
         panel.addView(aboutButton, aboutParams);
@@ -1056,7 +1080,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         dialog.show();
     }
 
-    private void showBetaInfoDialog(boolean welcome) {
+    private void showBetaInfoDialog(boolean welcome, Runnable afterClose) {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(18), dp(12), dp(18), dp(4));
@@ -1082,7 +1106,77 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(245, 224, 177));
         });
+        dialog.setOnDismissListener(d -> {
+            if (afterClose != null) {
+                afterClose.run();
+            }
+        });
         dialog.show();
+    }
+
+    private void showRenameHeroDialog(boolean firstLaunch) {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+
+        panel.addView(dialogTitle(firstLaunch ? "Name your hero" : "Rename Hero"));
+        TextView note = text(firstLaunch ? "What should we call your hero?" : "Choose a new hero name.",
+                15, Color.rgb(226, 205, 163), false);
+        note.setPadding(0, 0, 0, dp(10));
+        panel.addView(note);
+
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setText(heroName);
+        input.setSelectAllOnFocus(true);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(12)});
+        input.setTextColor(Color.rgb(245, 224, 177));
+        input.setHintTextColor(Color.rgb(126, 82, 37));
+        input.setTextSize(18);
+        input.setHint("Arin");
+        input.setPadding(dp(10), dp(6), dp(10), dp(6));
+        input.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(126, 82, 37)));
+        panel.addView(input, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setView(panel)
+                .setPositiveButton(firstLaunch ? "Start" : "Save", null);
+        if (!firstLaunch) {
+            builder.setNegativeButton("Cancel", null);
+        }
+        AlertDialog dialog = builder.create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            if (!firstLaunch) {
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.rgb(245, 224, 177));
+            }
+            Button save = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            save.setTextColor(Color.rgb(245, 224, 177));
+            save.setOnClickListener(v -> {
+                heroName = sanitizeHeroName(input.getText().toString());
+                heroNamePromptSeen = true;
+                saveState();
+                updateViews();
+                dialog.dismiss();
+            });
+        });
+        dialog.show();
+    }
+
+    private String sanitizeHeroName(String value) {
+        if (value == null) {
+            return "Arin";
+        }
+        String cleaned = value.trim();
+        if (cleaned.isEmpty()) {
+            return "Arin";
+        }
+        return cleaned.length() > 12 ? cleaned.substring(0, 12) : cleaned;
     }
 
     private TextView dialogTitle(String title) {
@@ -1119,6 +1213,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         boolean hasSensor = stepCounterSensor != null;
         boolean hasPermission = hasStepPermission();
+        heroNameView.setText(heroName);
         dateView.setText("Lv. 1");
         todayStepsView.setText(String.valueOf(todaySteps));
         goldView.setText(String.valueOf(gold));
@@ -4338,6 +4433,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     @Override
     public int scenePlayerMaxHp() {
         return maxPlayerHp();
+    }
+
+    @Override
+    public String sceneHeroName() {
+        return heroName;
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.example.stepcounterbase;
 import java.util.ArrayList;
 
 final class GameState {
+    String heroName = "Arin";
     String todayKey = "";
     int baseline = -1;
     int todaySteps = 0;
@@ -22,6 +23,7 @@ final class GameState {
     boolean chestReady = false;
     boolean showDevTools = false;
     boolean betaWelcomeSeen = false;
+    boolean heroNamePromptSeen = false;
     int phase = 0;
     int encounterIndex = 0;
     int travelLeft = 0;

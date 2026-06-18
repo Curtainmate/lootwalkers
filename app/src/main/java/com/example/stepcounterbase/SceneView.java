@@ -18,6 +18,8 @@ final class SceneView extends View {
 
         int scenePlayerMaxHp();
 
+        String sceneHeroName();
+
         boolean sceneShouldShowEnemy();
 
         boolean sceneIsBossFight();
@@ -129,7 +131,7 @@ final class SceneView extends View {
         int heroX = dp(24);
         int heroY = ground - heroSize + dp(HERO_BASELINE_OFFSET_DP);
         drawFrame(canvas, heroSheet, frame, heroX, heroY, heroSize, heroSize);
-        drawHpBar(canvas, heroX, heroY - dp(18), heroSize, model.scenePlayerHp(), model.scenePlayerMaxHp(), "Arin");
+        drawHpBar(canvas, heroX, heroY - dp(18), heroSize, model.scenePlayerHp(), model.scenePlayerMaxHp(), model.sceneHeroName());
 
         if (model.sceneShouldShowEnemy()) {
             boolean boss = model.sceneIsBossFight();
