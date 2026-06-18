@@ -340,8 +340,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightPrompt.setGravity(Gravity.CENTER);
         fightPrompt.setPadding(0, dp(6), 0, dp(12));
         fightHubPanel.addView(fightPrompt);
-        fightHubPanel.addView(categoryCard(R.drawable.category_areas, "AREAS", "Farm individual enemies for specific drops.", v -> showFightScreen(FIGHT_AREAS)));
-        fightHubPanel.addView(categoryCard(R.drawable.category_dungeons, "DUNGEONS", "Clear encounters, defeat bosses, and open chests.", v -> showFightScreen(FIGHT_DUNGEONS)));
+        fightHubPanel.addView(categoryCard(R.drawable.category_areas, "AREAS", "Start here. Farm enemies for gold and loot.", v -> showFightScreen(FIGHT_AREAS)));
+        fightHubPanel.addView(categoryCard(R.drawable.category_dungeons, "DUNGEONS", "Harder fights with chest rewards.", v -> showFightScreen(FIGHT_DUNGEONS)));
         fightPanel.addView(fightHubPanel);
 
         areasPanel = darkCard();
@@ -1062,7 +1062,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.setPadding(dp(18), dp(12), dp(18), dp(4));
 
         panel.addView(dialogTitle(welcome ? "Welcome to Lootwalkers" : "About Lootwalkers Beta"));
-        String body = "Walk to power combat. Fight enemies, find loot, sell spare items, buy maps, and unlock harder places.\n\n"
+        String body = "Start in Grassy Fields. Walk to power attacks, defeat enemies, and find loot.\n\n"
+                + "Sell spare items at the Merchant, then buy maps to unlock harder places.\n\n"
+                + "Areas are best for farming. Dungeons are harder and end with chest rewards.\n\n"
                 + "This is an early beta. Step tracking may vary by phone, especially when the app is closed.\n\n"
                 + "There is no account or cloud save yet. Progress is stored only on this phone.\n\n"
                 + "Feedback is welcome: confusing screens, odd balance, or step tracking problems are the most useful things to report.";
@@ -1636,7 +1638,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         if (visibleCount == 0) {
-            TextView emptyView = text("No unequipped items.", 14, Color.rgb(226, 205, 163), false);
+            TextView emptyView = text("No unequipped items.\nFight enemies to find loot. Sell spare items at the Merchant.", 14, Color.rgb(226, 205, 163), false);
             emptyView.setGravity(Gravity.CENTER);
             emptyView.setPadding(0, dp(14), 0, dp(10));
             inventoryListView.addView(emptyView);
@@ -1991,13 +1993,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void showLockedGraveyardDialog() {
         showLockedMapDialog("Area Locked", R.drawable.map_forgotten_graveyard,
-                "You need the Old Graveyard Map to enter this area.\n\nThe Merchant sells it for "
+                "You need the Old Graveyard Map to enter this area.\n\nFight enemies for gold, then buy the map from the Merchant for "
                         + FORGOTTEN_GRAVEYARD_MAP_PRICE + "g.");
     }
 
     private void showLockedChapelDialog() {
         showLockedMapDialog("Dungeon Locked", R.drawable.map_forgotten_chapel,
-                "You need the Forgotten Chapel Map to enter this dungeon.\n\nThe Merchant sells it for "
+                "You need the Forgotten Chapel Map to enter this dungeon.\n\nFight enemies for gold, then buy the map from the Merchant for "
                         + FORGOTTEN_CHAPEL_MAP_PRICE + "g.");
     }
 
@@ -2242,8 +2244,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         areasPanel.removeAllViews();
         areasPanel.addView(sectionTitle("AREAS"));
+        areasPanel.addView(subtleHint("New players should start in Grassy Fields."));
         areasPanel.addView(areaBannerCard(R.drawable.title_grassy_fields, "Grassy Fields",
-                "Beginner fields with slimes, scarecrows, and bandits.", null,
+                "Beginner fields with slimes, scarecrows, and bandits.", "START HERE",
                 v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
         areasPanel.addView(areaBannerCard(R.drawable.title_forgotten_graveyard, "Old Graveyard",
                 forgottenGraveyardUnlocked ? "Undead enemies and Moonlit Warden gear." : "Buy the map from the Merchant.",
@@ -2265,6 +2268,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         dungeonsPanel.removeAllViews();
         dungeonsPanel.addView(sectionTitle("DUNGEONS"));
+        dungeonsPanel.addView(subtleHint("Dungeons are tougher. Bring food and expect chest rewards."));
         dungeonsPanel.addView(areaBannerCard(R.drawable.title_goblin_cave, "Goblin Cave I",
                 "Goblin Chief boss, chest rewards.", null, null));
         dungeonsPanel.addView(dungeonActionRow(DUNGEON_GOBLIN_CAVE));
@@ -2902,7 +2906,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private LinearLayout merchantBuyRow(Item item, int price, String detail, String note, View.OnClickListener listener) {
-        LinearLayout row = merchantItemRowBase(item, item.name, detail, note + " | Price: " + price + "g");
+        String visibleNote = null;
+        if (ItemCatalog.BREAD.equals(item.key)) {
+            visibleNote = "Owned: " + countItemsByKey(ItemCatalog.BREAD);
+        } else if (!canBuy(item, price) && gold >= price) {
+            visibleNote = note;
+        }
+        LinearLayout row = merchantItemRowBase(item, item.name, detail, visibleNote);
         Button buy = actionButton(autoEatBuyButtonLabel(item, price), canBuy(item, price));
         buy.setOnClickListener(listener);
         row.addView(buy, new LinearLayout.LayoutParams(dp(84), dp(48)));
@@ -4238,6 +4248,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private TextView sectionTitle(String label) {
         return ui.sectionTitle(label);
+    }
+
+    private TextView subtleHint(String value) {
+        TextView hint = text(value, 13, Color.rgb(192, 157, 100), false);
+        hint.setGravity(Gravity.CENTER);
+        hint.setPadding(dp(4), 0, dp(4), dp(8));
+        return hint;
     }
 
     private LinearLayout adventureCard(String tag, String title, String body, View.OnClickListener listener) {
