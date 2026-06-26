@@ -216,7 +216,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         loadState();
         setContentView(buildLayout());
         updateViews();
-        maybeShowBetaWelcome();
+        maybeShowHeroNamePrompt();
     }
 
     @Override
@@ -1071,21 +1071,6 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         updateViews();
     }
 
-    private void maybeShowBetaWelcome() {
-        if (betaWelcomeSeen) {
-            maybeShowHeroNamePrompt();
-            return;
-        }
-        betaWelcomeSeen = true;
-        saveState();
-        View root = getWindow() == null ? null : getWindow().getDecorView();
-        if (root == null) {
-            showBetaInfoDialog(true, this::maybeShowHeroNamePrompt);
-        } else {
-            root.post(() -> showBetaInfoDialog(true, this::maybeShowHeroNamePrompt));
-        }
-    }
-
     private void maybeShowHeroNamePrompt() {
         if (heroNamePromptSeen) {
             maybeShowQuickStart();
@@ -1115,6 +1100,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.addView(quickStartLine("2", "Walk to attack. No tapping needed."));
         panel.addView(quickStartLine("3", "Sell loot at Merchant."));
         panel.addView(quickStartLine("4", "Buy maps to unlock new places."));
+        panel.addView(quickStartNote("Note: Step tracking may vary by phone."));
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(panel)
@@ -1137,6 +1123,12 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private TextView quickStartLine(String step, String message) {
         TextView view = text(step + ". " + message, 15, Color.rgb(226, 205, 163), false);
         view.setPadding(0, 0, 0, dp(8));
+        return view;
+    }
+
+    private TextView quickStartNote(String message) {
+        TextView view = text(message, 14, Color.rgb(192, 157, 100), false);
+        view.setPadding(0, dp(4), 0, dp(8));
         return view;
     }
 
