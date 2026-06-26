@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 import java.util.ArrayList;
 
@@ -55,3 +55,5 @@ final class GameState {
     final ArrayList<Item> inventory = new ArrayList<>();
     final ArrayList<DailyStats> dailyHistory = new ArrayList<>();
 }
+
+

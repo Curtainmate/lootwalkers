@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 import android.Manifest;
 import android.app.Activity;
@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.text.InputFilter;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -33,11 +34,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-import static com.example.stepcounterbase.GameRules.*;
+import static com.curtainmate.lootwalkers.GameRules.*;
 
 public class MainActivity extends Activity implements SensorEventListener, SceneView.Model {
-    private static final String APP_VERSION_LABEL = "Lootwalkers Beta 0.7.115";
     private static final int REQUEST_ACTIVITY_RECOGNITION = 40;
+    private static final int PENDING_NONE = 0;
+    private static final int PENDING_AREA = 1;
+    private static final int PENDING_DUNGEON = 2;
     private static final int AREA_DEEP_FOREST = 0;
     private static final int AREA_GRASSY_FIELDS = 1;
     private static final int AREA_FORGOTTEN_GRAVEYARD = 2;
@@ -131,6 +134,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private boolean showDevTools = false;
     private boolean betaWelcomeSeen = false;
     private boolean heroNamePromptSeen = false;
+    private int pendingPermissionAction = PENDING_NONE;
+    private int pendingPermissionDungeon = DUNGEON_GOBLIN_CAVE;
+    private int pendingPermissionArea = AREA_GRASSY_FIELDS;
+    private int pendingPermissionEnemy = AREA_ENEMY_GREEN_SLIME;
     private int townScreen = TOWN_HOME;
 
     private String heroName = "Arin";
@@ -188,7 +195,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private boolean lastRewardFromChest = false;
     private final ArrayList<Item> lastRewardItems = new ArrayList<>();
     private int rewardStepsRemaining = 0;
-    private String eventLog = "Ready at the cave mouth.";
+    private String eventLog = "Ready for the next walk.";
     private boolean combatLogVisible = true;
     private final ArrayList<Item> inventory = new ArrayList<>();
     private final ArrayList<DailyStats> dailyHistory = new ArrayList<>();
@@ -268,7 +275,41 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (requestCode == REQUEST_ACTIVITY_RECOGNITION) {
             updateViews();
             startListeningIfReady();
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                runPendingPermissionAction();
+            } else {
+                clearPendingPermissionAction();
+                addEvent("Step tracking permission was not enabled.");
+                updateViews();
+            }
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (activeRun || chestReady) {
+            confirmRetreatFromActivity();
+            return;
+        }
+        if (mainTab == TAB_FIGHT) {
+            if (fightScreen == FIGHT_AREA_ENEMY) {
+                showFightScreen(FIGHT_AREAS);
+                return;
+            }
+            if (fightScreen == FIGHT_AREAS || fightScreen == FIGHT_DUNGEONS || fightScreen == FIGHT_DUNGEON_DETAIL) {
+                showFightScreen(FIGHT_HUB);
+                return;
+            }
+            super.onBackPressed();
+            return;
+        }
+        if (mainTab == TAB_TOWN && townScreen != TOWN_HOME) {
+            townScreen = TOWN_HOME;
+            updateMainScreens();
+            saveState();
+            return;
+        }
+        showFightScreen(FIGHT_HUB);
     }
 
     private View buildLayout() {
@@ -276,6 +317,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         screen.setOrientation(LinearLayout.VERTICAL);
         screen.setBackgroundColor(Color.rgb(16, 14, 11));
         screen.setPadding(dp(8), dp(10), dp(8), dp(6));
+        applySystemBarPadding(screen);
 
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(false);
@@ -530,6 +572,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void startAreaFarming() {
         if (!hasStepPermission()) {
+            pendingPermissionAction = PENDING_AREA;
+            pendingPermissionArea = selectedArea;
+            pendingPermissionEnemy = selectedAreaEnemy;
             requestStepPermission();
             return;
         }
@@ -560,6 +605,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void startDungeonRun(int dungeon) {
         if (!hasStepPermission()) {
+            pendingPermissionAction = PENDING_DUNGEON;
+            pendingPermissionDungeon = dungeon;
             requestStepPermission();
             return;
         }
@@ -1009,7 +1056,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         chestOpenedAt = 0L;
         lastReward = "Prototype reset. Start Goblin Cave I when ready.";
         setRewardMessage("Rewards", "Start a fight to earn gold and gear.");
-        eventLog = "Prototype reset. Ready at the cave mouth.";
+        eventLog = "Prototype reset. Ready for the next walk.";
         saveState();
         updateViews();
     }
@@ -1044,7 +1091,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         panel.setPadding(dp(18), dp(12), dp(18), dp(8));
 
         panel.addView(dialogTitle("Preferences"));
-        panel.addView(text(APP_VERSION_LABEL, 14, Color.rgb(192, 157, 100), true));
+        panel.addView(text(appVersionLabel(), 14, Color.rgb(192, 157, 100), true));
 
         Button aboutButton = actionButton("About beta", false);
         aboutButton.setOnClickListener(v -> showBetaInfoDialog(false, null));
@@ -1253,7 +1300,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         } else if (chestReady) {
             systemView.setText("Dungeon clear. Walk 10 steps to open the chest.");
         } else {
-            systemView.setText(APP_VERSION_LABEL);
+            systemView.setText(appVersionLabel());
         }
     }
 
@@ -2101,7 +2148,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private void showLockedMapDialog(String title, int iconRes, String messageText) {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(18), dp(14), dp(18), dp(12));
+        panel.setPadding(dp(18), dp(12), dp(18), dp(12));
+        panel.addView(dialogTitle(title));
 
         ImageView icon = new ImageView(this);
         icon.setImageResource(iconRes);
@@ -2124,9 +2172,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         actions.addView(merchant, weightedWidth(1.0f));
         panel.addView(actions);
 
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(panel);
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(title)
-                .setView(panel)
+                .setView(scroll)
                 .create();
         back.setOnClickListener(v -> dialog.dismiss());
         merchant.setOnClickListener(v -> {
@@ -3261,12 +3310,26 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void confirmSellGear(Item item) {
-        new AlertDialog.Builder(this)
-                .setTitle("Sell " + item.name + "?")
-                .setMessage("Sell for " + item.sellValue + "g. This cannot be undone.")
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+        panel.addView(dialogTitle("Sell " + item.name + "?"));
+        panel.addView(text("Sell for " + item.sellValue + "g. This cannot be undone.",
+                15, Color.rgb(226, 205, 163), false));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(panel)
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Sell", (dialog, which) -> sellGear(item))
-                .show();
+                .setPositiveButton("Sell", (confirmDialog, which) -> sellGear(item))
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.rgb(245, 224, 177));
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(232, 98, 73));
+        });
+        dialog.show();
     }
 
     private void sellGear(Item item) {
@@ -3420,6 +3483,73 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getWindow().getDecorView().setSystemUiVisibility(0);
         }
+    }
+
+    private void applySystemBarPadding(LinearLayout screen) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT_WATCH) {
+            return;
+        }
+        screen.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPadding(
+                    dp(8),
+                    dp(10) + insets.getSystemWindowInsetTop(),
+                    dp(8),
+                    dp(6) + insets.getSystemWindowInsetBottom()
+            );
+            return insets;
+        });
+    }
+
+    private String appVersionLabel() {
+        try {
+            String versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            return "Lootwalkers Beta " + versionName;
+        } catch (Exception ignored) {
+            return "Lootwalkers Beta";
+        }
+    }
+
+    private void runPendingPermissionAction() {
+        int action = pendingPermissionAction;
+        int dungeon = pendingPermissionDungeon;
+        int area = pendingPermissionArea;
+        int enemy = pendingPermissionEnemy;
+        clearPendingPermissionAction();
+
+        if (action == PENDING_AREA) {
+            selectedArea = area;
+            selectedAreaEnemy = enemy;
+            startAreaFarming();
+        } else if (action == PENDING_DUNGEON) {
+            startDungeonRun(dungeon);
+        }
+    }
+
+    private void clearPendingPermissionAction() {
+        pendingPermissionAction = PENDING_NONE;
+    }
+
+    private void confirmRetreatFromActivity() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+        panel.addView(dialogTitle("Retreat from fight?"));
+        panel.addView(text("Your steps are still counted, but this fight will stop.",
+                15, Color.rgb(226, 205, 163), false));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(panel)
+                .setNegativeButton("Stay", null)
+                .setPositiveButton("Retreat", (d, which) -> stopActivity())
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.rgb(245, 224, 177));
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(232, 98, 73));
+        });
+        dialog.show();
     }
 
     private void unequipItem(Item item) {
@@ -4530,3 +4660,5 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return activityMode == MODE_DUNGEON && selectedDungeon == DUNGEON_FORGOTTEN_CHAPEL;
     }
 }
+
+

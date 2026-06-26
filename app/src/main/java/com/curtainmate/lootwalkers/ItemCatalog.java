@@ -1,12 +1,12 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
-import static com.example.stepcounterbase.GameRules.SLOT_ARMOR;
-import static com.example.stepcounterbase.GameRules.SLOT_BOOTS;
-import static com.example.stepcounterbase.GameRules.SLOT_CHARM;
-import static com.example.stepcounterbase.GameRules.SLOT_CONSUMABLE;
-import static com.example.stepcounterbase.GameRules.SLOT_LOOT;
-import static com.example.stepcounterbase.GameRules.SLOT_UNLOCK;
-import static com.example.stepcounterbase.GameRules.SLOT_WEAPON;
+import static com.curtainmate.lootwalkers.GameRules.SLOT_ARMOR;
+import static com.curtainmate.lootwalkers.GameRules.SLOT_BOOTS;
+import static com.curtainmate.lootwalkers.GameRules.SLOT_CHARM;
+import static com.curtainmate.lootwalkers.GameRules.SLOT_CONSUMABLE;
+import static com.curtainmate.lootwalkers.GameRules.SLOT_LOOT;
+import static com.curtainmate.lootwalkers.GameRules.SLOT_UNLOCK;
+import static com.curtainmate.lootwalkers.GameRules.SLOT_WEAPON;
 
 final class ItemCatalog {
     static final String NOVICE_SWORD = "novice_sword";
@@ -289,3 +289,5 @@ final class ItemCatalog {
                 0, 0, 0, 0, sellValue, iconRes);
     }
 }
+
+

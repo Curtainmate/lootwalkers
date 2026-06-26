@@ -10,8 +10,9 @@ $LocalProperties = Join-Path $Root "local.properties"
 $BuildDir = Join-Path $Root "manual-build"
 $OutputApk = Join-Path $Root "app\build\outputs\apk\debug\app-debug.apk"
 $SafeVersionName = $VersionName -replace '[^A-Za-z0-9._-]', '-'
-$VersionedOutputApk = Join-Path $Root "app\build\outputs\apk\debug\lootwalkers-$SafeVersionName-debug.apk"
-$DebugKeystore = Join-Path $Root "debug.keystore"
+$VersionedOutputApk = Join-Path $Root "app\build\outputs\apk\debug\lootwalkers-$SafeVersionName-beta.apk"
+$KeystoreDir = Join-Path $Root "keystores"
+$BetaKeystore = Join-Path $KeystoreDir "lootwalkers-beta.keystore"
 $JavaHome = "C:\Android Studio\jbr"
 
 function Read-SdkDir {
@@ -57,6 +58,7 @@ $env:PATH = (Join-Path $JavaHome "bin") + ";" + $env:PATH
 
 $Javac = Join-Path $JavaHome "bin\javac.exe"
 $Jar = Join-Path $JavaHome "bin\jar.exe"
+$Keytool = Join-Path $JavaHome "bin\keytool.exe"
 $Aapt2 = Join-Path $BuildTools "aapt2.exe"
 $D8 = Join-Path $BuildTools "d8.bat"
 $Zipalign = Join-Path $BuildTools "zipalign.exe"
@@ -69,11 +71,27 @@ New-Item -ItemType Directory -Force -Path (Join-Path $BuildDir "gen") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $BuildDir "classes") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $BuildDir "dex") | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $OutputApk) | Out-Null
+New-Item -ItemType Directory -Force -Path $KeystoreDir | Out-Null
+
+if (!(Test-Path $BetaKeystore)) {
+    Invoke-Checked {
+        & $Keytool -genkeypair `
+            -v `
+            -keystore $BetaKeystore `
+            -storepass lootwalkers-beta `
+            -keypass lootwalkers-beta `
+            -alias lootwalkers-beta `
+            -keyalg RSA `
+            -keysize 2048 `
+            -validity 10000 `
+            -dname "CN=Lootwalkers Beta, OU=Beta, O=Curtainmate, L=Local, S=Local, C=US"
+    } "keytool generate beta keystore"
+}
 
 $ManifestPath = Join-Path $Root "app\src\main\AndroidManifest.xml"
 $BuildManifestPath = Join-Path $BuildDir "AndroidManifest.xml"
 $Manifest = Get-Content $ManifestPath -Raw
-$Manifest = $Manifest -replace '<manifest xmlns:android="http://schemas.android.com/apk/res/android">', "<manifest xmlns:android=`"http://schemas.android.com/apk/res/android`" package=`"com.example.stepcounterbase`" android:versionCode=`"$VersionCode`" android:versionName=`"$VersionName`">"
+$Manifest = $Manifest -replace '<manifest xmlns:android="http://schemas.android.com/apk/res/android">', "<manifest xmlns:android=`"http://schemas.android.com/apk/res/android`" package=`"com.curtainmate.lootwalkers`" android:versionCode=`"$VersionCode`" android:versionName=`"$VersionName`">"
 $Compatibility = '<uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />' + "`r`n    " +
     '<supports-screens android:smallScreens="true" android:normalScreens="true" android:largeScreens="true" android:xlargeScreens="true" android:anyDensity="true" />' + "`r`n    " +
     '<uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />'
@@ -126,10 +144,10 @@ try {
 Invoke-Checked { & $Zipalign -f 4 $UnsignedWithDex (Join-Path $BuildDir "aligned.apk") } "zipalign"
 Invoke-Checked {
     & $Apksigner sign `
-        --ks $DebugKeystore `
-        --ks-key-alias androiddebugkey `
-        --ks-pass pass:android `
-        --key-pass pass:android `
+        --ks $BetaKeystore `
+        --ks-key-alias lootwalkers-beta `
+        --ks-pass pass:lootwalkers-beta `
+        --key-pass pass:lootwalkers-beta `
         --out $OutputApk `
         (Join-Path $BuildDir "aligned.apk")
 } "apksigner sign"

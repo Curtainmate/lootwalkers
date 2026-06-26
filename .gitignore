@@ -5,3 +5,6 @@ app/build/
 manual-build/
 local.properties
 *.iml
+debug.keystore
+keystores/
+signing.properties

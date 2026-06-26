@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 final class CombatSystem {
     static final int BASE_PLAYER_HP = 100;
@@ -211,3 +211,5 @@ final class CombatSystem {
         return (hp + damage - 1) / damage;
     }
 }
+
+

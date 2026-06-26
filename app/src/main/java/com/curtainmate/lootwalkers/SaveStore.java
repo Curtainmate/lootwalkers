@@ -1,12 +1,12 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import static com.example.stepcounterbase.GameRules.FIGHT_COMBAT;
-import static com.example.stepcounterbase.GameRules.FIGHT_HUB;
-import static com.example.stepcounterbase.GameRules.MODE_DUNGEON;
-import static com.example.stepcounterbase.GameRules.MODE_NONE;
+import static com.curtainmate.lootwalkers.GameRules.FIGHT_COMBAT;
+import static com.curtainmate.lootwalkers.GameRules.FIGHT_HUB;
+import static com.curtainmate.lootwalkers.GameRules.MODE_DUNGEON;
+import static com.curtainmate.lootwalkers.GameRules.MODE_NONE;
 
 final class SaveStore {
     private static final String PREFS = "lootwalkers_prefs";
@@ -254,3 +254,5 @@ final class SaveStore {
         return builder.toString();
     }
 }
+
+

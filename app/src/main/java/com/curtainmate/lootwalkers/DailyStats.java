@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 final class DailyStats {
     String dateKey;
@@ -44,3 +44,5 @@ final class DailyStats {
         return stats;
     }
 }
+
+

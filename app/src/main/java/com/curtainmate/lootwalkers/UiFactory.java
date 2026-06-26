@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -311,3 +311,5 @@ final class UiFactory {
         return background;
     }
 }
+
+

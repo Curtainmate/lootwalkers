@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 final class GameRules {
     static final String SLOT_WEAPON = "weapon";
@@ -34,3 +34,5 @@ final class GameRules {
     private GameRules() {
     }
 }
+
+

@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 final class Item {
     final int id;
@@ -72,3 +72,5 @@ final class Item {
         return null;
     }
 }
+
+

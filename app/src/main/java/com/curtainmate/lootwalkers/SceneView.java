@@ -1,4 +1,4 @@
-package com.example.stepcounterbase;
+package com.curtainmate.lootwalkers;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -276,3 +276,5 @@ final class SceneView extends View {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 }
+
+
