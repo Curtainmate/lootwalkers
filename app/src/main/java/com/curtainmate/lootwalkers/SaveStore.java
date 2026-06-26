@@ -30,6 +30,8 @@ final class SaveStore {
     private static final String SHOW_DEV_TOOLS_KEY = "show_dev_tools";
     private static final String BETA_WELCOME_SEEN_KEY = "beta_welcome_seen";
     private static final String HERO_NAME_PROMPT_SEEN_KEY = "hero_name_prompt_seen";
+    private static final String QUICK_START_SEEN_KEY = "quick_start_seen";
+    private static final String FIRST_ENEMY_DEFEATED_SEEN_KEY = "first_enemy_defeated_seen";
     private static final String PHASE_KEY = "phase";
     private static final String ENCOUNTER_KEY = "encounter";
     private static final String TRAVEL_LEFT_KEY = "travel_left";
@@ -90,6 +92,8 @@ final class SaveStore {
         state.showDevTools = prefs.getBoolean(SHOW_DEV_TOOLS_KEY, false);
         state.betaWelcomeSeen = prefs.getBoolean(BETA_WELCOME_SEEN_KEY, false);
         state.heroNamePromptSeen = prefs.getBoolean(HERO_NAME_PROMPT_SEEN_KEY, false);
+        state.quickStartSeen = prefs.getBoolean(QUICK_START_SEEN_KEY, false);
+        state.firstEnemyDefeatedSeen = prefs.getBoolean(FIRST_ENEMY_DEFEATED_SEEN_KEY, false);
         state.activityTab = prefs.getInt(ACTIVITY_TAB_KEY, 0);
         state.autoEatUnlocked = prefs.getBoolean(AUTO_EAT_UNLOCKED_KEY, false);
         state.forgottenGraveyardUnlocked = prefs.getBoolean(FORGOTTEN_GRAVEYARD_UNLOCKED_KEY, false);
@@ -162,6 +166,8 @@ final class SaveStore {
                 .putBoolean(SHOW_DEV_TOOLS_KEY, state.showDevTools)
                 .putBoolean(BETA_WELCOME_SEEN_KEY, state.betaWelcomeSeen)
                 .putBoolean(HERO_NAME_PROMPT_SEEN_KEY, state.heroNamePromptSeen)
+                .putBoolean(QUICK_START_SEEN_KEY, state.quickStartSeen)
+                .putBoolean(FIRST_ENEMY_DEFEATED_SEEN_KEY, state.firstEnemyDefeatedSeen)
                 .putInt(PHASE_KEY, state.phase)
                 .putInt(ENCOUNTER_KEY, state.encounterIndex)
                 .putInt(TRAVEL_LEFT_KEY, state.travelLeft)

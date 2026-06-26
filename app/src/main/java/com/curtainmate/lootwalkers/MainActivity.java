@@ -134,6 +134,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private boolean showDevTools = false;
     private boolean betaWelcomeSeen = false;
     private boolean heroNamePromptSeen = false;
+    private boolean quickStartSeen = false;
+    private boolean firstEnemyDefeatedSeen = false;
     private int pendingPermissionAction = PENDING_NONE;
     private int pendingPermissionDungeon = DUNGEON_GOBLIN_CAVE;
     private int pendingPermissionArea = AREA_GRASSY_FIELDS;
@@ -279,7 +281,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 runPendingPermissionAction();
             } else {
                 clearPendingPermissionAction();
-                addEvent("Step tracking permission was not enabled.");
+                showStepPermissionNeededDialog();
                 updateViews();
             }
         }
@@ -836,6 +838,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         showDevTools = state.showDevTools;
         betaWelcomeSeen = state.betaWelcomeSeen;
         heroNamePromptSeen = state.heroNamePromptSeen;
+        quickStartSeen = state.quickStartSeen;
+        firstEnemyDefeatedSeen = state.firstEnemyDefeatedSeen;
         phase = state.phase;
         encounterIndex = state.encounterIndex;
         travelLeft = state.travelLeft;
@@ -915,6 +919,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         state.showDevTools = showDevTools;
         state.betaWelcomeSeen = betaWelcomeSeen;
         state.heroNamePromptSeen = heroNamePromptSeen;
+        state.quickStartSeen = quickStartSeen;
+        state.firstEnemyDefeatedSeen = firstEnemyDefeatedSeen;
         state.phase = phase;
         state.encounterIndex = encounterIndex;
         state.travelLeft = travelLeft;
@@ -1023,6 +1029,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         todayEnemiesDefeated = 0;
         todayChestsOpened = 0;
         dailyRewardMask = 0;
+        betaWelcomeSeen = false;
+        heroNamePromptSeen = false;
+        quickStartSeen = false;
+        firstEnemyDefeatedSeen = false;
         activityTab = ACTIVITY_TODAY;
         autoEatUnlocked = false;
         forgottenGraveyardUnlocked = false;
@@ -1078,11 +1088,77 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void maybeShowHeroNamePrompt() {
         if (heroNamePromptSeen) {
+            maybeShowQuickStart();
             return;
         }
         heroNamePromptSeen = true;
         saveState();
         showRenameHeroDialog(true);
+    }
+
+    private void maybeShowQuickStart() {
+        if (quickStartSeen) {
+            return;
+        }
+        quickStartSeen = true;
+        saveState();
+        showQuickStartDialog();
+    }
+
+    private void showQuickStartDialog() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+
+        panel.addView(dialogTitle("Quick start"));
+        panel.addView(quickStartLine("1", "Start in Grassy Fields."));
+        panel.addView(quickStartLine("2", "Walk to attack. No tapping needed."));
+        panel.addView(quickStartLine("3", "Sell loot at Merchant."));
+        panel.addView(quickStartLine("4", "Buy maps to unlock new places."));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(panel)
+                .setPositiveButton("Start in Grassy Fields", null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            Button start = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            start.setTextColor(Color.rgb(245, 224, 177));
+            start.setOnClickListener(v -> {
+                dialog.dismiss();
+                showFightScreen(FIGHT_AREAS);
+            });
+        });
+        dialog.show();
+    }
+
+    private TextView quickStartLine(String step, String message) {
+        TextView view = text(step + ". " + message, 15, Color.rgb(226, 205, 163), false);
+        view.setPadding(0, 0, 0, dp(8));
+        return view;
+    }
+
+    private void showStepPermissionNeededDialog() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(18), dp(12), dp(18), dp(4));
+        panel.addView(dialogTitle("Step tracking needed"));
+        panel.addView(text("Steps power combat. Enable activity permission to play fights.",
+                15, Color.rgb(226, 205, 163), false));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(panel)
+                .setPositiveButton("Done", null)
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.rgb(245, 224, 177));
+        });
+        dialog.show();
     }
 
     private void showPreferencesDialog() {
@@ -1210,6 +1286,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 saveState();
                 updateViews();
                 dialog.dismiss();
+                if (firstLaunch) {
+                    maybeShowQuickStart();
+                }
             });
         });
         dialog.show();
@@ -1780,7 +1859,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         if (visibleCount == 0) {
-            TextView emptyView = text("No unequipped items.\nFight enemies to find loot. Sell spare items at the Merchant.", 14, Color.rgb(226, 205, 163), false);
+            TextView emptyView = text("Fight enemies to find loot.\nSell spare loot at Merchant.", 14, Color.rgb(226, 205, 163), false);
             emptyView.setGravity(Gravity.CENTER);
             emptyView.setPadding(0, dp(14), 0, dp(10));
             inventoryListView.addView(emptyView);
@@ -2390,7 +2469,8 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         areasPanel.addView(sectionTitle("AREAS"));
         areasPanel.addView(subtleHint("New players should start in Grassy Fields."));
         areasPanel.addView(areaBannerCard(R.drawable.title_grassy_fields, "Grassy Fields",
-                "Beginner fields with slimes, scarecrows, and bandits.", "START HERE",
+                "Beginner fields with slimes, scarecrows, and bandits.",
+                firstEnemyDefeatedSeen ? null : "START HERE",
                 v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
         areasPanel.addView(areaBannerCard(R.drawable.title_forgotten_graveyard, "Old Graveyard",
                 forgottenGraveyardUnlocked ? "Undead enemies and Moonlit Warden gear." : "Buy the map from the Merchant.",
@@ -3053,24 +3133,23 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         String visibleNote = null;
         if (ItemCatalog.BREAD.equals(item.key)) {
             visibleNote = "Owned: " + countItemsByKey(ItemCatalog.BREAD);
-        } else if (!canBuy(item, price) && gold >= price) {
+        } else if (isOwnedUnlock(item)) {
             visibleNote = note;
+        } else if (gold < price) {
+            visibleNote = "Need " + (price - gold) + "g more";
         }
         LinearLayout row = merchantItemRowBase(item, item.name, detail, visibleNote);
-        Button buy = actionButton(autoEatBuyButtonLabel(item, price), canBuy(item, price));
+        boolean canBuyNow = canBuy(item, price);
+        Button buy = actionButton(autoEatBuyButtonLabel(item, price), canBuyNow);
+        buy.setEnabled(canBuyNow);
+        buy.setAlpha(canBuyNow ? 1.0f : 0.72f);
         buy.setOnClickListener(listener);
         row.addView(buy, new LinearLayout.LayoutParams(dp(84), dp(48)));
         return row;
     }
 
     private String autoEatBuyButtonLabel(Item item, int price) {
-        if (ItemCatalog.AUTO_EAT_MANUAL.equals(item.key) && autoEatUnlocked) {
-            return "Owned";
-        }
-        if (ItemCatalog.FORGOTTEN_GRAVEYARD_MAP.equals(item.key) && forgottenGraveyardUnlocked) {
-            return "Owned";
-        }
-        if (ItemCatalog.FORGOTTEN_CHAPEL_MAP.equals(item.key) && forgottenChapelUnlocked) {
+        if (isOwnedUnlock(item)) {
             return "Owned";
         }
         return gold >= price ? "Buy" : price + "g";
@@ -3080,16 +3159,26 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         if (item == null) {
             return false;
         }
-        if (ItemCatalog.AUTO_EAT_MANUAL.equals(item.key) && autoEatUnlocked) {
-            return false;
-        }
-        if (ItemCatalog.FORGOTTEN_GRAVEYARD_MAP.equals(item.key) && forgottenGraveyardUnlocked) {
-            return false;
-        }
-        if (ItemCatalog.FORGOTTEN_CHAPEL_MAP.equals(item.key) && forgottenChapelUnlocked) {
+        if (isOwnedUnlock(item)) {
             return false;
         }
         return gold >= price;
+    }
+
+    private boolean isOwnedUnlock(Item item) {
+        if (item == null) {
+            return false;
+        }
+        if (ItemCatalog.AUTO_EAT_MANUAL.equals(item.key)) {
+            return autoEatUnlocked;
+        }
+        if (ItemCatalog.FORGOTTEN_GRAVEYARD_MAP.equals(item.key)) {
+            return forgottenGraveyardUnlocked;
+        }
+        if (ItemCatalog.FORGOTTEN_CHAPEL_MAP.equals(item.key)) {
+            return forgottenChapelUnlocked;
+        }
+        return false;
     }
 
     private LinearLayout merchantSellList() {
@@ -3120,7 +3209,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         if (rows == 0) {
-            TextView empty = text("No sellable loot or spare gear yet.", 15, Color.rgb(192, 157, 100), false);
+            TextView empty = text("No sellable loot yet.\nFarm enemies in Grassy Fields.", 15, Color.rgb(192, 157, 100), false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(10), 0, dp(12));
             list.addView(empty);
@@ -4344,6 +4433,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
     private void recordEnemyDefeated() {
         todayEnemiesDefeated += 1;
+        firstEnemyDefeatedSeen = true;
         updateTodayHistory();
     }
 

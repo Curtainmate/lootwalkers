@@ -24,6 +24,8 @@ final class GameState {
     boolean showDevTools = false;
     boolean betaWelcomeSeen = false;
     boolean heroNamePromptSeen = false;
+    boolean quickStartSeen = false;
+    boolean firstEnemyDefeatedSeen = false;
     int phase = 0;
     int encounterIndex = 0;
     int travelLeft = 0;
