@@ -2799,32 +2799,52 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         townPanel.addView(text("TOWN", 26, Color.rgb(245, 224, 177), true));
-        townPanel.addView(townCard(R.drawable.town_merchant_card, "Merchant", "Sell loot and spare gear.", v -> {
+        townPanel.addView(townCard(R.drawable.card_town_merchant_clean, "Merchant", "Sell loot and spare gear.", v -> {
             townScreen = TOWN_MERCHANT;
             updateTownPanel();
         }));
-        townPanel.addView(townCard(R.drawable.town_activity_card, "Activity", "Daily steps, history, and rewards.", v -> {
+        townPanel.addView(townCard(R.drawable.card_town_activity_clean, "Activity", "Daily steps, history, and rewards.", v -> {
             townScreen = TOWN_ACTIVITY;
             updateTownPanel();
         }));
-        addLockedRow(townPanel, "Bank");
-        addLockedRow(townPanel, "Trainer");
+        TextView futureNote = text("More town buildings will arrive in future updates.", 13,
+                Color.rgb(192, 157, 100), false);
+        futureNote.setGravity(Gravity.CENTER);
+        futureNote.setPadding(dp(8), dp(6), dp(8), 0);
+        townPanel.addView(futureNote);
     }
 
     private LinearLayout townCard(int drawableRes, String title, String detail, View.OnClickListener listener) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(8), dp(8), dp(8), dp(8));
-        card.setBackground(ui.panelBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+        card.setPadding(0, 0, 0, 0);
+        card.setBackgroundColor(Color.TRANSPARENT);
         card.setClickable(true);
         card.setOnClickListener(listener);
 
         FrameLayout imageFrame = new FrameLayout(this);
+        imageFrame.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(126, 82, 37)));
         ImageView image = new ImageView(this);
         image.setImageResource(drawableRes);
         image.setAdjustViewBounds(false);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        image.setPadding(0, 0, 0, 0);
         imageFrame.addView(image, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        View shade = new View(this);
+        shade.setBackground(new GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{
+                        Color.argb(238, 14, 10, 7),
+                        Color.argb(188, 14, 10, 7),
+                        Color.argb(68, 14, 10, 7),
+                        Color.argb(8, 14, 10, 7)
+                }
+        ));
+        imageFrame.addView(shade, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
@@ -2832,20 +2852,22 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         LinearLayout labelPanel = new LinearLayout(this);
         labelPanel.setOrientation(LinearLayout.VERTICAL);
         labelPanel.setGravity(Gravity.CENTER_VERTICAL);
-        labelPanel.setPadding(dp(14), 0, dp(8), 0);
-        labelPanel.setBackgroundColor(Color.argb(150, 12, 9, 6));
+        labelPanel.setPadding(dp(16), 0, dp(10), 0);
+        labelPanel.setBackgroundColor(Color.TRANSPARENT);
         TextView titleView = text(title, 23, Color.rgb(245, 224, 177), true);
+        titleView.setShadowLayer(dp(2), 0, dp(1), Color.rgb(0, 0, 0));
         TextView detailView = text(detail, 13, Color.rgb(226, 205, 163), false);
         detailView.setPadding(0, dp(3), 0, 0);
+        detailView.setShadowLayer(dp(2), 0, dp(1), Color.rgb(0, 0, 0));
         labelPanel.addView(titleView);
         labelPanel.addView(detailView);
-        FrameLayout.LayoutParams labelParams = new FrameLayout.LayoutParams(dp(190), FrameLayout.LayoutParams.MATCH_PARENT);
+        FrameLayout.LayoutParams labelParams = new FrameLayout.LayoutParams(dp(258), FrameLayout.LayoutParams.MATCH_PARENT);
         labelParams.gravity = Gravity.LEFT | Gravity.CENTER_VERTICAL;
         imageFrame.addView(labelPanel, labelParams);
 
         card.addView(imageFrame, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(160)
+                dp(148)
         ));
         card.setLayoutParams(buttonLayoutParams());
         return card;
