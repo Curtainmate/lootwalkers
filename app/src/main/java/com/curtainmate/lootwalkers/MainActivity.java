@@ -529,12 +529,33 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightPanel.addView(combatInfoPanel);
 
         skillsPanel = darkCard();
-        skillsPanel.addView(text("SKILLS", 26, Color.rgb(245, 224, 177), true));
-        skillsPanel.addView(skillRow(R.drawable.skill_woodcutting, "Woodcutting"));
-        skillsPanel.addView(skillRow(R.drawable.skill_mining, "Mining"));
-        skillsPanel.addView(skillRow(R.drawable.skill_fishing, "Fishing"));
-        skillsPanel.addView(skillRow(R.drawable.skill_crafting, "Crafting"));
-        skillsPanel.addView(skillRow(R.drawable.skill_cooking, "Cooking"));
+        TextView skillsTitle = text("SKILLS", 26, Color.rgb(245, 224, 177), true);
+        skillsTitle.setGravity(Gravity.CENTER);
+        skillsPanel.addView(skillsTitle);
+        TextView skillsIntro = text("Non-combat skills will arrive after the core walking RPG loop is stable.",
+                14, Color.rgb(192, 157, 100), false);
+        skillsIntro.setGravity(Gravity.CENTER);
+        skillsIntro.setPadding(dp(8), dp(6), dp(8), dp(14));
+        skillsPanel.addView(skillsIntro);
+        skillsPanel.addView(skillPreviewCard(
+                "Gathering",
+                "Woodcutting, mining, and fishing for future materials.",
+                new int[]{R.drawable.skill_woodcutting, R.drawable.skill_mining, R.drawable.skill_fishing}
+        ));
+        skillsPanel.addView(skillPreviewCard(
+                "Crafting",
+                "Turn gathered materials into gear and useful supplies.",
+                new int[]{R.drawable.skill_crafting}
+        ));
+        skillsPanel.addView(skillPreviewCard(
+                "Cooking",
+                "Prepare food for longer walks and harder fights.",
+                new int[]{R.drawable.skill_cooking}
+        ));
+        TextView skillsFooter = text("Coming later.", 13, Color.rgb(192, 157, 100), true);
+        skillsFooter.setGravity(Gravity.CENTER);
+        skillsFooter.setPadding(dp(8), dp(8), dp(8), 0);
+        skillsPanel.addView(skillsFooter);
         contentRoot.addView(skillsPanel);
 
         bagPanel = darkCard();
@@ -2022,6 +2043,50 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         row.addView(soonView, new LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT));
         row.setLayoutParams(buttonLayoutParams());
         return row;
+    }
+
+    private LinearLayout skillPreviewCard(String title, String detail, int[] iconResIds) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(12), dp(11), dp(12), dp(11));
+        card.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(96, 64, 32)));
+
+        LinearLayout icons = new LinearLayout(this);
+        icons.setOrientation(LinearLayout.HORIZONTAL);
+        icons.setGravity(Gravity.CENTER);
+        int visibleIcons = Math.min(iconResIds.length, 3);
+        for (int i = 0; i < visibleIcons; i++) {
+            ImageView icon = new ImageView(this);
+            icon.setImageResource(iconResIds[i]);
+            icon.setAdjustViewBounds(true);
+            icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            icon.setPadding(dp(3), dp(3), dp(3), dp(3));
+            LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(46), dp(46));
+            if (i > 0) {
+                iconParams.setMargins(dp(4), 0, 0, 0);
+            }
+            icons.addView(icon, iconParams);
+        }
+        card.addView(icons, new LinearLayout.LayoutParams(dp(150), LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setPadding(dp(12), 0, 0, 0);
+        TextView titleView = text(title, 18, Color.rgb(245, 224, 177), true);
+        TextView detailView = text(detail, 13, Color.rgb(226, 205, 163), false);
+        detailView.setPadding(0, dp(4), 0, 0);
+        copy.addView(titleView);
+        copy.addView(detailView);
+        card.addView(copy, weightedWidth(1.0f));
+
+        TextView soonView = text("SOON", 11, Color.rgb(192, 157, 100), true);
+        soonView.setGravity(Gravity.CENTER);
+        soonView.setPadding(dp(8), dp(4), dp(8), dp(4));
+        soonView.setBackground(ui.panelBackground(Color.rgb(28, 24, 19), Color.rgb(80, 58, 35)));
+        card.addView(soonView, new LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT));
+        card.setLayoutParams(buttonLayoutParams());
+        return card;
     }
 
     private FrameLayout testAreaCard(int drawableRes, View.OnClickListener listener) {
