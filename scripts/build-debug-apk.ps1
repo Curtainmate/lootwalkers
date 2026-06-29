@@ -1,19 +1,69 @@
 param(
-    [int]$VersionCode = 34,
-    [string]$VersionName = "0.7.14"
+    [int]$VersionCode = 0,
+    [string]$VersionName = "",
+    [switch]$NoVersionBump
 )
 
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$VersionFile = Join-Path $Root "version.properties"
 $LocalProperties = Join-Path $Root "local.properties"
 $BuildDir = Join-Path $Root "manual-build"
 $OutputApk = Join-Path $Root "app\build\outputs\apk\debug\app-debug.apk"
-$SafeVersionName = $VersionName -replace '[^A-Za-z0-9._-]', '-'
-$VersionedOutputApk = Join-Path $Root "app\build\outputs\apk\debug\lootwalkers-$SafeVersionName-beta.apk"
 $KeystoreDir = Join-Path $Root "keystores"
 $BetaKeystore = Join-Path $KeystoreDir "lootwalkers-beta.keystore"
 $JavaHome = "C:\Android Studio\jbr"
+
+function Read-VersionFile {
+    if (!(Test-Path $VersionFile)) {
+        return @{
+            versionCode = 34
+            versionName = "0.7.14"
+        }
+    }
+
+    $values = @{}
+    foreach ($line in Get-Content $VersionFile) {
+        if ($line -match '^\s*([^#][^=]+?)\s*=\s*(.*?)\s*$') {
+            $values[$matches[1]] = $matches[2]
+        }
+    }
+
+    if (!$values.ContainsKey("versionCode") -or !$values.ContainsKey("versionName")) {
+        throw "version.properties must contain versionCode and versionName"
+    }
+
+    return $values
+}
+
+function Get-NextVersionName {
+    param([string]$CurrentVersionName)
+
+    $parts = $CurrentVersionName.Split(".")
+    if ($parts.Length -ne 3) {
+        throw "Version name must use major.minor.patch format, for example 0.7.14"
+    }
+
+    $patch = 0
+    if (![int]::TryParse($parts[2], [ref]$patch)) {
+        throw "Version patch must be a number"
+    }
+
+    return "$($parts[0]).$($parts[1]).$($patch + 1)"
+}
+
+function Write-VersionFile {
+    param(
+        [int]$Code,
+        [string]$Name
+    )
+
+    Set-Content -LiteralPath $VersionFile -Value @(
+        "versionCode=$Code",
+        "versionName=$Name"
+    ) -Encoding ASCII
+}
 
 function Read-SdkDir {
     if (!(Test-Path $LocalProperties)) {
@@ -39,6 +89,26 @@ function Invoke-Checked {
         throw "$Name failed"
     }
 }
+
+$StoredVersion = Read-VersionFile
+$ExplicitVersion = ($VersionCode -gt 0) -or ($VersionName -ne "")
+
+if ($ExplicitVersion) {
+    if ($VersionCode -le 0 -or $VersionName -eq "") {
+        throw "Pass both -VersionCode and -VersionName, or neither."
+    }
+} else {
+    $VersionCode = [int]$StoredVersion["versionCode"]
+    $VersionName = [string]$StoredVersion["versionName"]
+
+    if (!$NoVersionBump) {
+        $VersionCode = $VersionCode + 1
+        $VersionName = Get-NextVersionName $VersionName
+    }
+}
+
+$SafeVersionName = $VersionName -replace '[^A-Za-z0-9._-]', '-'
+$VersionedOutputApk = Join-Path $Root "app\build\outputs\apk\debug\lootwalkers-$SafeVersionName-beta.apk"
 
 $Sdk = Read-SdkDir
 $BuildTools = Join-Path $Sdk "build-tools\37.0.0"
@@ -153,6 +223,10 @@ Invoke-Checked {
 } "apksigner sign"
 Invoke-Checked { & $Apksigner verify --print-certs $OutputApk } "apksigner verify"
 Copy-Item -LiteralPath $OutputApk -Destination $VersionedOutputApk -Force
+
+if (!$NoVersionBump) {
+    Write-VersionFile -Code $VersionCode -Name $VersionName
+}
 
 & $Aapt2 dump badging $OutputApk | Select-String -Pattern "package:|sdkVersion|targetSdkVersion|supports-screens"
 Get-Item $OutputApk | Select-Object FullName, Length, LastWriteTime
