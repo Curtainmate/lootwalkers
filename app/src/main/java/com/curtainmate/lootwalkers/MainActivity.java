@@ -2394,6 +2394,10 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         }
 
         areaEnemyTitleView.setText(areaName());
+        TextView subtitle = text("Choose an enemy to farm.", 14, Color.rgb(192, 157, 100), false);
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setPadding(0, 0, 0, dp(12));
+        areaEnemyPanel.addView(subtitle);
         if (selectedAreaIsGrassyFields()) {
             areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_GREEN_SLIME));
             areaEnemyPanel.addView(enemyChoiceCard(AREA_ENEMY_RUNAWAY_SCARECROW));
@@ -2412,15 +2416,17 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         int previousEnemy = selectedAreaEnemy;
         selectedAreaEnemy = enemy;
         String enemyName = selectedAreaEnemyName();
-        String enemyStats = selectedAreaEnemyStats();
+        String enemyStatsPrimary = selectedAreaEnemyStatsPrimary();
+        String enemyStatsSecondary = selectedAreaEnemyStatsSecondary();
+        String tier = selectedAreaEnemyTier();
         int portrait = selectedAreaPortrait();
         String goldRange = selectedAreaGoldRange();
         selectedAreaEnemy = previousEnemy;
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(8), dp(8), dp(8), dp(8));
-        card.setBackground(ui.panelBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+        card.setPadding(dp(9), dp(9), dp(9), dp(9));
+        card.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(96, 64, 32)));
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
@@ -2430,24 +2436,34 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         portraitView.setImageResource(portrait);
         portraitView.setAdjustViewBounds(true);
         portraitView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        portraitView.setPadding(dp(5), dp(5), dp(5), dp(5));
-        header.addView(portraitView, new LinearLayout.LayoutParams(dp(86), dp(86)));
+        portraitView.setPadding(dp(2), dp(2), dp(2), dp(2));
+        header.addView(portraitView, new LinearLayout.LayoutParams(dp(76), dp(76)));
 
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(dp(12), 0, 0, 0);
-        copy.addView(text(enemyName, 21, Color.rgb(245, 224, 177), true));
-        TextView stats = text(enemyStats, 14, Color.rgb(226, 205, 163), false);
-        stats.setPadding(0, dp(5), 0, 0);
-        copy.addView(stats);
+        LinearLayout nameRow = new LinearLayout(this);
+        nameRow.setOrientation(LinearLayout.HORIZONTAL);
+        nameRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView nameView = text(enemyName, 19, Color.rgb(245, 224, 177), true);
+        nameRow.addView(nameView, weightedWidth(1.0f));
+        TextView tierView = text(tier, 12, Color.rgb(192, 157, 100), true);
+        tierView.setGravity(Gravity.RIGHT);
+        nameRow.addView(tierView);
+        copy.addView(nameRow);
+        TextView primaryStats = text(enemyStatsPrimary, 13, Color.rgb(226, 205, 163), false);
+        primaryStats.setPadding(0, dp(5), 0, 0);
+        copy.addView(primaryStats);
+        TextView secondaryStats = text(enemyStatsSecondary, 13, Color.rgb(192, 157, 100), false);
+        secondaryStats.setPadding(0, dp(2), 0, 0);
+        copy.addView(secondaryStats);
         header.addView(copy, weightedWidth(1.0f));
         card.addView(header);
 
         LinearLayout buttons = new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setPadding(0, dp(8), 0, 0);
-        Button fightButton = actionButton("Fight", true);
-        fightButton.setOnClickListener(v -> {
+        TextView fightButton = enemyActionButton("Fight", true, v -> {
             selectedAreaEnemy = enemy;
             startAreaFarming();
         });
@@ -2455,8 +2471,7 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightParams.setMargins(0, 0, dp(4), 0);
         buttons.addView(fightButton, fightParams);
 
-        Button lootButton = actionButton(expandedAreaLootEnemy == enemy ? "Hide Loot" : "Show Loot", false);
-        lootButton.setOnClickListener(v -> {
+        TextView lootButton = enemyActionButton(expandedAreaLootEnemy == enemy ? "Hide Loot" : "Show Loot", false, v -> {
             expandedAreaLootEnemy = expandedAreaLootEnemy == enemy ? -1 : enemy;
             updateAreaEnemyPanel();
         });
@@ -2471,6 +2486,20 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         card.setLayoutParams(buttonLayoutParams());
         return card;
+    }
+
+    private TextView enemyActionButton(String label, boolean primary, View.OnClickListener listener) {
+        TextView button = text(label, 14, Color.rgb(245, 224, 177), true);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(dp(38));
+        button.setPadding(dp(8), 0, dp(8), 0);
+        button.setBackground(ui.panelBackground(
+                primary ? Color.rgb(126, 82, 37) : Color.rgb(28, 24, 19),
+                primary ? Color.rgb(240, 174, 55) : Color.rgb(126, 82, 37)
+        ));
+        button.setClickable(true);
+        button.setOnClickListener(listener);
+        return button;
     }
 
     private LinearLayout enemyLootPreview(int enemy, String goldRange) {
@@ -4157,6 +4186,60 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return "HP 100 | Damage 4-6 | Attack 55 steps | Gold 4-8";
         }
         return "HP 40 | Damage 1-6 | Attack 100 steps | Gold 1-3";
+    }
+
+    private String selectedAreaEnemyStatsPrimary() {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                return "HP 170  ·  Damage 8-12";
+            }
+            if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                return "HP 95  ·  Damage 3-5";
+            }
+            return "HP 130  ·  Damage 6-9";
+        }
+        if (!selectedAreaIsGrassyFields()) {
+            return "HP 75  ·  Damage 10";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return "HP 80  ·  Damage 7-9";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return "HP 100  ·  Damage 4-6";
+        }
+        return "HP 40  ·  Damage 1-6";
+    }
+
+    private String selectedAreaEnemyStatsSecondary() {
+        if (selectedAreaIsForgottenGraveyard()) {
+            if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+                return "Attack every 105 steps  ·  Gold 7-12";
+            }
+            if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+                return "Attack every 45 steps  ·  Gold 5-8";
+            }
+            return "Attack every 90 steps  ·  Gold 5-9";
+        }
+        if (!selectedAreaIsGrassyFields()) {
+            return "Attack every 115 steps";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return "Attack every 110 steps  ·  Gold 2-5";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return "Attack every 55 steps  ·  Gold 4-8";
+        }
+        return "Attack every 100 steps  ·  Gold 1-3";
+    }
+
+    private String selectedAreaEnemyTier() {
+        if (selectedAreaEnemy == AREA_ENEMY_RAGGED_BANDIT) {
+            return "Tier 3";
+        }
+        if (selectedAreaEnemy == AREA_ENEMY_RUNAWAY_SCARECROW) {
+            return "Tier 2";
+        }
+        return "Tier 1";
     }
 
     private int selectedAreaPortrait() {
