@@ -6,6 +6,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -78,6 +79,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private TextView goldView;
     private TextView dungeonTitleView;
     private TextView dungeonStatusView;
+    private TextView combatTypeChipView;
+    private TextView combatPaceChipView;
+    private TextView combatStepsChipView;
     private TextView progressDetailView;
     private TextView enemyView;
     private TextView nextAttackView;
@@ -417,18 +421,39 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         fightPanel.addView(dungeonsPanel);
 
         combatConsolePanel = darkCard();
+        combatConsolePanel.setPadding(dp(8), dp(12), dp(8), dp(10));
 
         combatHeaderPanel = new LinearLayout(this);
         combatHeaderPanel.setOrientation(LinearLayout.VERTICAL);
-        combatHeaderPanel.setPadding(0, 0, 0, dp(8));
+        combatHeaderPanel.setPadding(dp(8), 0, dp(8), dp(8));
         dungeonTitleView = text("", 22, Color.rgb(245, 224, 177), true);
+        dungeonTitleView.setGravity(Gravity.CENTER);
         combatHeaderPanel.addView(dungeonTitleView);
         dungeonStatusView = text("", 14, Color.rgb(192, 157, 100), false);
+        dungeonStatusView.setGravity(Gravity.CENTER);
         dungeonStatusView.setPadding(0, dp(4), 0, dp(8));
-        combatHeaderPanel.addView(dungeonStatusView);
+        dungeonStatusView.setVisibility(View.GONE);
+
+        LinearLayout combatChipRow = new LinearLayout(this);
+        combatChipRow.setOrientation(LinearLayout.HORIZONTAL);
+        combatChipRow.setPadding(0, dp(8), 0, 0);
+        combatTypeChipView = combatInfoChip("");
+        combatPaceChipView = combatInfoChip("");
+        combatStepsChipView = combatInfoChip("");
+        LinearLayout.LayoutParams firstChipParams = weightedWidth(1.0f);
+        firstChipParams.setMargins(0, 0, dp(4), 0);
+        combatChipRow.addView(combatTypeChipView, firstChipParams);
+        LinearLayout.LayoutParams middleChipParams = weightedWidth(1.0f);
+        middleChipParams.setMargins(dp(4), 0, dp(4), 0);
+        combatChipRow.addView(combatPaceChipView, middleChipParams);
+        LinearLayout.LayoutParams lastChipParams = weightedWidth(1.0f);
+        lastChipParams.setMargins(dp(4), 0, 0, 0);
+        combatChipRow.addView(combatStepsChipView, lastChipParams);
+        combatHeaderPanel.addView(combatChipRow);
+
         dungeonProgressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         dungeonProgressBar.setMax(1000);
-        combatHeaderPanel.addView(dungeonProgressBar, progressLayoutParams());
+        dungeonProgressBar.setVisibility(View.GONE);
         progressDetailView = text("", 14, Color.rgb(245, 224, 177), false);
         progressDetailView.setPadding(0, dp(6), 0, 0);
         combatConsolePanel.addView(combatHeaderPanel);
@@ -456,12 +481,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         attackProgressBar.setMax(1000);
         nextAttackView = text("", 14, Color.rgb(192, 157, 100), false);
         attackMeterIconView = ui.meterIcon(R.drawable.attack_icon);
-        meterRow.addView(meterCard("Your Attack", attackMeterIconView, attackProgressBar, nextAttackView), weightedWidth(1.0f));
+        LinearLayout.LayoutParams attackMeterParams = weightedWidth(1.0f);
+        attackMeterParams.setMargins(0, 0, dp(4), 0);
+        meterRow.addView(meterCard("Your Attack", attackMeterIconView, attackProgressBar, nextAttackView), attackMeterParams);
         enemyProgressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         enemyProgressBar.setMax(1000);
         enemyView = text("", 15, Color.rgb(245, 224, 177), true);
         enemyMeterIconView = ui.meterIcon(R.drawable.enemy_attack_icon);
-        meterRow.addView(meterCard("Enemy Attack", enemyMeterIconView, enemyProgressBar, enemyView), weightedWidth(1.0f));
+        LinearLayout.LayoutParams enemyMeterParams = weightedWidth(1.0f);
+        enemyMeterParams.setMargins(dp(4), 0, 0, 0);
+        meterRow.addView(meterCard("Enemy Attack", enemyMeterIconView, enemyProgressBar, enemyView), enemyMeterParams);
         actionPanel.addView(meterRow);
 
         LinearLayout combatButtonRow = new LinearLayout(this);
@@ -470,12 +499,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         retreatButton.setTextColor(Color.rgb(245, 224, 177));
         retreatButton.setBackground(ui.panelBackground(Color.rgb(82, 34, 28), Color.rgb(188, 84, 58)));
         retreatButton.setOnClickListener(v -> stopActivity());
-        combatButtonRow.addView(retreatButton, weightedWidth(1.0f));
+        LinearLayout.LayoutParams retreatParams = weightedWidth(1.0f);
+        retreatParams.setMargins(0, 0, dp(4), 0);
+        combatButtonRow.addView(retreatButton, retreatParams);
         combatLogToggleButton = actionButton("Hide Log", false);
         combatLogToggleButton.setTextColor(Color.rgb(245, 224, 177));
         combatLogToggleButton.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(192, 125, 44)));
         combatLogToggleButton.setOnClickListener(v -> toggleCombatLog());
-        combatButtonRow.addView(combatLogToggleButton, weightedWidth(1.0f));
+        LinearLayout.LayoutParams logParams = weightedWidth(1.0f);
+        logParams.setMargins(dp(4), 0, 0, 0);
+        combatButtonRow.addView(combatLogToggleButton, logParams);
         actionPanel.addView(combatButtonRow, buttonLayoutParams());
         combatConsolePanel.addView(actionPanel);
         fightPanel.addView(combatConsolePanel);
@@ -531,10 +564,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         contentRoot.addView(testNextDayButton, buttonLayoutParams());
 
         eventLogView = text("", 14, Color.rgb(226, 205, 163), false);
-        systemView = text("", 14, Color.rgb(192, 157, 100), false);
+        systemView = text("", 12, Color.rgb(192, 157, 100), false);
         systemView.setGravity(Gravity.CENTER);
-        systemView.setPadding(0, dp(12), 0, 0);
-        contentRoot.addView(systemView, fullWidthWrapContent());
+        systemView.setPadding(dp(8), dp(7), dp(8), dp(7));
+        systemView.setBackground(ui.panelBackground(Color.rgb(18, 16, 12), Color.rgb(80, 58, 35)));
+        LinearLayout.LayoutParams statusParams = fullWidthWrapContent();
+        statusParams.setMargins(0, 0, 0, dp(8));
+        contentRoot.addView(systemView, statusParams);
 
         screen.addView(scrollView, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1323,6 +1359,16 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         return row;
     }
 
+    private TextView combatInfoChip(String value) {
+        TextView chip = text(value, 12, Color.rgb(245, 224, 177), true);
+        chip.setGravity(Gravity.CENTER);
+        chip.setSingleLine(false);
+        chip.setMinHeight(dp(38));
+        chip.setPadding(dp(6), dp(6), dp(6), dp(6));
+        chip.setBackground(ui.panelBackground(Color.rgb(24, 21, 17), Color.rgb(80, 58, 35)));
+        return chip;
+    }
+
     private void updateViews() {
         if (todayStepsView == null) {
             return;
@@ -1338,6 +1384,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         dungeonTitleView.setText(activityTitle());
         dungeonStatusView.setText(activityStatus());
+        combatTypeChipView.setText(combatTypeChipText());
+        combatPaceChipView.setText(combatPaceChipText());
+        combatStepsChipView.setText(combatStepsChipText());
         progressDetailView.setText(progressText());
         enemyView.setText(enemyText());
         nextAttackView.setText(nextAttackText());
@@ -1422,6 +1471,48 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             return stageLabel() + " - " + difficultyLabel() + " - " + estimatedClearSteps() + " estimated steps";
         }
         return "Pick an activity to begin.";
+    }
+
+    private String combatTypeChipText() {
+        if (chestReady) {
+            return "Chest";
+        }
+        if (activityMode == MODE_AREA) {
+            return "Area";
+        }
+        if (activityMode == MODE_DUNGEON) {
+            return isBossFight() ? "Boss" : "Dungeon";
+        }
+        return "Fight";
+    }
+
+    private String combatPaceChipText() {
+        if (chestReady) {
+            return "After boss";
+        }
+        if (phase == PHASE_EXHAUSTED) {
+            return "Recover";
+        }
+        if (activityMode == MODE_AREA) {
+            return enemyName();
+        }
+        if (activityMode == MODE_DUNGEON) {
+            return difficultyLabel();
+        }
+        return "Ready";
+    }
+
+    private String combatStepsChipText() {
+        if (chestReady) {
+            return Math.min(autoChestCharge, 10) + " / 10 steps";
+        }
+        if (activityMode == MODE_AREA) {
+            return "Until retreat";
+        }
+        if (activityMode == MODE_DUNGEON) {
+            return estimatedClearSteps() + " est.";
+        }
+        return "Walk to act";
     }
 
     private void setRewardMessage(String title, String note) {
@@ -1922,12 +2013,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(dp(12), 0, 0, 0);
         copy.addView(text(label, 17, Color.rgb(245, 224, 177), true));
-        copy.addView(text("COMING SOON", 12, Color.rgb(192, 157, 100), true));
         row.addView(copy, weightedWidth(1.0f));
 
-        TextView lockView = text("LOCKED", 11, Color.rgb(226, 205, 163), true);
-        lockView.setGravity(Gravity.CENTER);
-        row.addView(lockView, new LinearLayout.LayoutParams(dp(70), LinearLayout.LayoutParams.WRAP_CONTENT));
+        TextView soonView = text("SOON", 11, Color.rgb(226, 205, 163), true);
+        soonView.setGravity(Gravity.CENTER);
+        soonView.setPadding(dp(8), dp(4), dp(8), dp(4));
+        soonView.setBackground(ui.panelBackground(Color.rgb(36, 30, 22), Color.rgb(80, 58, 35)));
+        row.addView(soonView, new LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT));
         row.setLayoutParams(buttonLayoutParams());
         return row;
     }
@@ -1970,19 +2062,37 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     private FrameLayout areaBannerCard(int drawableRes, String title, String detail, String badgeText,
                                        View.OnClickListener listener) {
         FrameLayout card = new FrameLayout(this);
-        card.setPadding(dp(8), dp(8), dp(8), dp(8));
-        card.setBackground(ui.panelBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+        card.setPadding(0, 0, 0, 0);
+        card.setBackgroundColor(Color.TRANSPARENT);
         if (listener != null) {
             card.setClickable(true);
             card.setOnClickListener(listener);
         }
 
         FrameLayout imageFrame = new FrameLayout(this);
+        imageFrame.setBackgroundColor(Color.TRANSPARENT);
         ImageView image = new ImageView(this);
         image.setImageResource(drawableRes);
         image.setAdjustViewBounds(false);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        image.setBackgroundColor(Color.TRANSPARENT);
+        image.setPadding(0, 0, 0, 0);
         imageFrame.addView(image, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        View shade = new View(this);
+        shade.setBackground(new GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{
+                        Color.argb(238, 14, 10, 7),
+                        Color.argb(188, 14, 10, 7),
+                        Color.argb(68, 14, 10, 7),
+                        Color.argb(8, 14, 10, 7)
+                }
+        ));
+        imageFrame.addView(shade, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
@@ -1990,15 +2100,17 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
         LinearLayout labelPanel = new LinearLayout(this);
         labelPanel.setOrientation(LinearLayout.VERTICAL);
         labelPanel.setGravity(Gravity.CENTER_VERTICAL);
-        labelPanel.setPadding(dp(14), 0, dp(8), 0);
-        labelPanel.setBackgroundColor(Color.argb(145, 12, 9, 6));
+        labelPanel.setPadding(dp(16), 0, dp(10), 0);
+        labelPanel.setBackgroundColor(Color.TRANSPARENT);
         TextView titleView = text(title, 22, Color.rgb(245, 224, 177), true);
+        titleView.setShadowLayer(dp(2), 0, dp(1), Color.rgb(0, 0, 0));
         TextView detailView = text(detail, 13, Color.rgb(226, 205, 163), false);
         detailView.setPadding(0, dp(3), 0, 0);
+        detailView.setShadowLayer(dp(2), 0, dp(1), Color.rgb(0, 0, 0));
         labelPanel.addView(titleView);
         labelPanel.addView(detailView);
         imageFrame.addView(labelPanel, new FrameLayout.LayoutParams(
-                dp(205),
+                dp(258),
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 Gravity.LEFT | Gravity.CENTER_VERTICAL
         ));
@@ -2019,11 +2131,15 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         card.addView(imageFrame, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(140),
+                bannerCardHeight(drawableRes),
                 Gravity.CENTER
         ));
         card.setLayoutParams(buttonLayoutParams());
         return card;
+    }
+
+    private int bannerCardHeight(int drawableRes) {
+        return dp(148);
     }
 
     private void showItemDetails(Item item) {
@@ -2205,13 +2321,13 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
     }
 
     private void showLockedGraveyardDialog() {
-        showLockedMapDialog("Area Locked", R.drawable.map_forgotten_graveyard,
+        showLockedMapDialog("Old Graveyard Locked", R.drawable.map_forgotten_graveyard,
                 "You need the Old Graveyard Map to enter this area.\n\nFight enemies for gold, then buy the map from the Merchant for "
                         + FORGOTTEN_GRAVEYARD_MAP_PRICE + "g.");
     }
 
     private void showLockedChapelDialog() {
-        showLockedMapDialog("Dungeon Locked", R.drawable.map_forgotten_chapel,
+        showLockedMapDialog("Forgotten Chapel Locked", R.drawable.map_forgotten_chapel,
                 "You need the Forgotten Chapel Map to enter this dungeon.\n\nFight enemies for gold, then buy the map from the Merchant for "
                         + FORGOTTEN_CHAPEL_MAP_PRICE + "g.");
     }
@@ -2335,14 +2451,18 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             selectedAreaEnemy = enemy;
             startAreaFarming();
         });
-        buttons.addView(fightButton, weightedWidth(1.0f));
+        LinearLayout.LayoutParams fightParams = weightedWidth(1.0f);
+        fightParams.setMargins(0, 0, dp(4), 0);
+        buttons.addView(fightButton, fightParams);
 
         Button lootButton = actionButton(expandedAreaLootEnemy == enemy ? "Hide Loot" : "Show Loot", false);
         lootButton.setOnClickListener(v -> {
             expandedAreaLootEnemy = expandedAreaLootEnemy == enemy ? -1 : enemy;
             updateAreaEnemyPanel();
         });
-        buttons.addView(lootButton, weightedWidth(1.0f));
+        LinearLayout.LayoutParams lootParams = weightedWidth(1.0f);
+        lootParams.setMargins(dp(4), 0, 0, 0);
+        buttons.addView(lootButton, lootParams);
         card.addView(buttons);
 
         if (expandedAreaLootEnemy == enemy) {
@@ -2459,12 +2579,11 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         areasPanel.removeAllViews();
         areasPanel.addView(sectionTitle("AREAS"));
-        areasPanel.addView(subtleHint("New players should start in Grassy Fields."));
-        areasPanel.addView(areaBannerCard(R.drawable.title_grassy_fields, "Grassy Fields",
+        areasPanel.addView(areaBannerCard(R.drawable.card_grassy_fields_clean, "Grassy Fields",
                 "Beginner fields with slimes, scarecrows, and bandits.",
                 firstEnemyDefeatedSeen ? null : "START HERE",
                 v -> showAreaEnemy(AREA_GRASSY_FIELDS)));
-        areasPanel.addView(areaBannerCard(R.drawable.title_forgotten_graveyard, "Old Graveyard",
+        areasPanel.addView(areaBannerCard(R.drawable.card_old_graveyard_clean, "Old Graveyard",
                 forgottenGraveyardUnlocked ? "Undead enemies and Moonlit Warden gear." : "Buy the map from the Merchant.",
                 forgottenGraveyardUnlocked ? null : "LOCKED",
                 v -> {
@@ -2484,15 +2603,14 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
 
         dungeonsPanel.removeAllViews();
         dungeonsPanel.addView(sectionTitle("DUNGEONS"));
-        dungeonsPanel.addView(subtleHint("Dungeons are tougher. Bring food and expect chest rewards."));
-        dungeonsPanel.addView(areaBannerCard(R.drawable.title_goblin_cave, "Goblin Cave I",
+        dungeonsPanel.addView(areaBannerCard(R.drawable.card_goblin_cave_clean, "Goblin Cave I",
                 "Goblin Chief boss, chest rewards.", null, null));
         dungeonsPanel.addView(dungeonActionRow(DUNGEON_GOBLIN_CAVE));
 
         if (dungeonLootVisible && selectedDungeon == DUNGEON_GOBLIN_CAVE) {
             dungeonsPanel.addView(dungeonInfoPreview());
         }
-        dungeonsPanel.addView(areaBannerCard(R.drawable.title_forgotten_chapel, "Forgotten Chapel",
+        dungeonsPanel.addView(areaBannerCard(R.drawable.card_forgotten_chapel_clean, "Forgotten Chapel",
                 forgottenChapelUnlocked ? "3 Chapel Acolytes and the Fallen Prior." : "Buy the map from the Merchant.",
                 forgottenChapelUnlocked ? null : "LOCKED", null));
         dungeonsPanel.addView(dungeonActionRow(DUNGEON_FORGOTTEN_CHAPEL));
@@ -2513,7 +2631,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
                 startDungeonRun(dungeon);
             }
         });
-        buttons.addView(startDungeon, weightedWidth(1.0f));
+        LinearLayout.LayoutParams startParams = weightedWidth(1.0f);
+        startParams.setMargins(0, 0, dp(4), 0);
+        buttons.addView(startDungeon, startParams);
 
         boolean showingThisDungeon = dungeonLootVisible && selectedDungeon == dungeon;
         Button lootButton = actionButton(showingThisDungeon ? "Hide Info" : "Show Info", false);
@@ -2526,7 +2646,9 @@ public class MainActivity extends Activity implements SensorEventListener, Scene
             }
             updateDungeonsPanel();
         });
-        buttons.addView(lootButton, weightedWidth(1.0f));
+        LinearLayout.LayoutParams lootParams = weightedWidth(1.0f);
+        lootParams.setMargins(dp(4), 0, 0, 0);
+        buttons.addView(lootButton, lootParams);
         buttons.setLayoutParams(buttonLayoutParams());
         return buttons;
     }

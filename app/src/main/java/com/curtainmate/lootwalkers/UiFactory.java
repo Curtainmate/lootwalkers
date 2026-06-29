@@ -15,6 +15,18 @@ import android.widget.TextView;
 
 final class UiFactory {
     private final Context context;
+    static final int COLOR_SCREEN = 0xFF100E0B;
+    static final int COLOR_PANEL = 0xFF1E1912;
+    static final int COLOR_PANEL_DEEP = 0xFF181511;
+    static final int COLOR_PANEL_SOFT = 0xFF241E16;
+    static final int COLOR_GOLD = 0xFFF0AE37;
+    static final int COLOR_GOLD_DARK = 0xFF81531F;
+    static final int COLOR_BORDER = 0xFF7E5225;
+    static final int COLOR_BORDER_DARK = 0xFF503A23;
+    static final int COLOR_TEXT = 0xFFF5E0B1;
+    static final int COLOR_TEXT_MUTED = 0xFFC09D64;
+    static final int COLOR_TEXT_SOFT = 0xFFE2CDA3;
+    static final int COLOR_GREEN_PANEL = 0xFF192A18;
 
     UiFactory(Context context) {
         this.context = context;
@@ -51,7 +63,7 @@ final class UiFactory {
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(14), dp(12), dp(14), dp(12));
-        layout.setBackground(cardBackground(Color.rgb(30, 25, 18), Color.rgb(126, 82, 37)));
+        layout.setBackground(cardBackground(COLOR_PANEL, COLOR_BORDER));
         LinearLayout.LayoutParams params = fullWidthWrapContent();
         params.setMargins(0, 0, 0, dp(8));
         layout.setLayoutParams(params);
@@ -63,19 +75,19 @@ final class UiFactory {
         button.setText(label);
         button.setTextSize(15);
         button.setAllCaps(false);
-        button.setTextColor(Color.rgb(245, 224, 177));
+        button.setTextColor(COLOR_TEXT);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         button.setBackground(cardBackground(
-                primary ? Color.rgb(129, 83, 31) : Color.rgb(36, 30, 22),
-                primary ? Color.rgb(240, 174, 55) : Color.rgb(126, 82, 37)
+                primary ? COLOR_GOLD_DARK : COLOR_PANEL_SOFT,
+                primary ? COLOR_GOLD : COLOR_BORDER
         ));
-        button.setMinHeight(dp(48));
+        button.setMinHeight(dp(46));
         button.setPadding(dp(8), 0, dp(8), 0);
         return button;
     }
 
     TextView sectionTitle(String label) {
-        TextView title = text(label, 24, Color.rgb(245, 224, 177), true);
+        TextView title = text(label, 24, COLOR_TEXT, true);
         title.setGravity(Gravity.CENTER);
         title.setPadding(0, 0, 0, dp(10));
         return title;
@@ -104,7 +116,7 @@ final class UiFactory {
         card.setGravity(drawableRes == 0 || showCopyWithImage ? Gravity.CENTER_VERTICAL : Gravity.CENTER);
         card.setPadding(dp(8), dp(8), dp(8), dp(8));
         card.setMinimumHeight(drawableRes == 0 ? dp(116) : 0);
-        card.setBackground(cardBackground(Color.rgb(25, 42, 24), Color.rgb(126, 82, 37)));
+        card.setBackground(cardBackground(COLOR_GREEN_PANEL, COLOR_BORDER));
         if (listener != null) {
             card.setClickable(true);
             card.setOnClickListener(listener);
@@ -132,8 +144,8 @@ final class UiFactory {
             LinearLayout copy = new LinearLayout(context);
             copy.setOrientation(LinearLayout.VERTICAL);
             copy.setPadding(drawableRes == 0 ? dp(12) : 0, 0, 0, 0);
-            TextView titleView = text(title, 21, Color.rgb(245, 224, 177), true);
-            TextView bodyView = text(body, 14, Color.rgb(226, 205, 163), false);
+            TextView titleView = text(title, 21, COLOR_TEXT, true);
+            TextView bodyView = text(body, 14, COLOR_TEXT_SOFT, false);
             bodyView.setPadding(0, dp(5), 0, 0);
             copy.addView(titleView);
             copy.addView(bodyView);
@@ -147,9 +159,9 @@ final class UiFactory {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.VERTICAL);
         row.setPadding(dp(12), dp(9), dp(12), dp(9));
-        row.setBackground(cardBackground(Color.rgb(36, 30, 22), Color.rgb(80, 58, 35)));
-        TextView labelView = text(label, 13, Color.rgb(192, 157, 100), true);
-        TextView valueView = text(value, 15, Color.rgb(245, 224, 177), false);
+        row.setBackground(cardBackground(COLOR_PANEL_SOFT, COLOR_BORDER_DARK));
+        TextView labelView = text(label, 13, COLOR_TEXT_MUTED, true);
+        TextView valueView = text(value, 15, COLOR_TEXT, false);
         valueView.setPadding(0, dp(3), 0, 0);
         row.addView(labelView);
         row.addView(valueView);
@@ -182,19 +194,19 @@ final class UiFactory {
         LinearLayout card = new LinearLayout(context);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(8), dp(8), dp(8), dp(8));
-        card.setBackground(cardBackground(Color.rgb(24, 21, 17), Color.rgb(55, 43, 31)));
+        card.setBackground(cardBackground(COLOR_PANEL_DEEP, Color.rgb(55, 43, 31)));
 
         LinearLayout header = new LinearLayout(context);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.addView(icon, iconParams);
-        TextView titleView = text(title, 13, Color.rgb(245, 224, 177), true);
+        TextView titleView = text(title, 13, COLOR_TEXT, true);
         titleView.setPadding(dp(8), 0, 0, 0);
         header.addView(titleView, weightedWidth(1.0f));
         card.addView(header);
 
         card.addView(bar, progressLayoutParams());
-        valueView.setTextColor(Color.rgb(192, 157, 100));
+        valueView.setTextColor(COLOR_TEXT_MUTED);
         valueView.setTextSize(12);
         valueView.setGravity(Gravity.CENTER);
         valueView.setPadding(0, dp(4), 0, 0);
@@ -203,7 +215,7 @@ final class UiFactory {
     }
 
     TextView placeholderIcon(String label, int size) {
-        TextView icon = text(label, 13, Color.rgb(245, 224, 177), true);
+        TextView icon = text(label, 13, COLOR_TEXT, true);
         icon.setGravity(Gravity.CENTER);
         icon.setSingleLine(false);
         icon.setBackground(cardBackground(Color.rgb(52, 42, 28), Color.rgb(192, 125, 44)));
@@ -250,10 +262,10 @@ final class UiFactory {
         if (button == null) {
             return;
         }
-        button.setTextColor(selected ? Color.WHITE : Color.rgb(245, 224, 177));
+        button.setTextColor(selected ? Color.WHITE : COLOR_TEXT);
         button.setBackground(cardBackground(
-                selected ? Color.rgb(129, 83, 31) : Color.rgb(36, 30, 22),
-                selected ? Color.rgb(240, 174, 55) : Color.rgb(126, 82, 37)
+                selected ? COLOR_GOLD_DARK : COLOR_PANEL_SOFT,
+                selected ? COLOR_GOLD : COLOR_BORDER
         ));
     }
 
